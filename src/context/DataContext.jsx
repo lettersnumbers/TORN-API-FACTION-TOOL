@@ -1,0 +1,18 @@
+import React, { createContext, useState, useContext } from 'react';
+
+const DataContext = createContext(null);
+
+export const DataProvider = ({ children }) => {
+  const [userName, setUserName] = useState('User Profile');
+  const [factionName, setFactionName] = useState('Faction Data');
+  const [hospitalCount, setHospitalCount] = useState(0);
+  const [userHospitalStatus, setUserHospitalStatus] = useState(0);
+
+  return (
+    <DataContext.Provider value={{ userName, setUserName, factionName, setFactionName, hospitalCount, setHospitalCount, userHospitalStatus, setUserHospitalStatus }}>
+      {children}
+    </DataContext.Provider>
+  );
+};
+
+export const useDataContext = () => useContext(DataContext);

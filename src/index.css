@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg-main: radial-gradient(circle at top, #02101a 0%, #02040a 100%);
+  --bg-panel: rgba(13, 17, 26, 0.7);
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  
+  --accent-primary: #00f0ff; /* Cyberpunk Cyan */
+  --accent-secondary: #ff003c; /* Cyberpunk Pink/Red */
+  --accent-glow: rgba(0, 240, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.1);
+  
+  /* Status & Vitals Colors */
+  --hospital-tint: rgba(255, 0, 60, 0.15);
+  --hospital-border: rgba(255, 0, 60, 0.5);
+  --war-tint: rgba(255, 0, 60, 0.08);
+  
+  --hp-life: #3b82f6;
+  --hp-energy: #22c55e;
+  --hp-nerve: #ef4444;
+  --hp-happy: #f59e0b;
+
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Rajdhani', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background: var(--bg-main);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Beautiful futuristic scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-main); 
+}
+ 
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary); 
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+a {
+  color: var(--accent-primary);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  text-shadow: 0 0 8px var(--accent-glow);
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
