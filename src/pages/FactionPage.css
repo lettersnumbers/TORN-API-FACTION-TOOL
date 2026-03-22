@@ -172,6 +172,7 @@
 
 .table-responsive {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
@@ -183,6 +184,7 @@
   padding: 16px 24px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  white-space: nowrap;
 }
 
 .data-table th {
@@ -300,4 +302,16 @@
   background-color: rgba(14, 165, 233, 0.1);
   color: var(--accent-secondary);
   border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+@media (max-width: 768px) {
+  .d-flex-between {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
 }
