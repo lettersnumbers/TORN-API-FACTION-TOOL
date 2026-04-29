@@ -453,7 +453,7 @@ const FactionWarRoom = () => {
           <table className="data-table" style={{ border: 'none' }}>
             <thead>
               <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
-                <th style={{ width: '40px' }}>Online?</th>
+                <th style={{ width: '40px' }}>O</th>
                 <th>Operative</th>
                 <th onClick={() => requestSort('level')} style={{ cursor: 'pointer' }}>Level {sortConfig.key === 'level' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => requestSort('score')} style={{ cursor: 'pointer' }}>Score {sortConfig.key === 'score' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
