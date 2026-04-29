@@ -3,6 +3,16 @@ import { useDataContext } from '../context/DataContext';
 import { fetchFactionWarData, fetchEnemyRoster, fetchUserData, fetchUserSpecific, fetchAnyUserSpecific, fetchFactionActiveWars, getFactionId } from '../services/api';
 
 const StatusCell = ({ status }) => {
+  const stateStr = status?.details || status?.state || 'Okay';
+  const isBad = status?.state === 'Hospital';
+  return (
+    <div style={{ color: isBad ? 'var(--hp-nerve)' : 'inherit', display: 'flex', flexDirection: 'column' }}>
+      <span>{stateStr}</span>
+    </div>
+  );
+};
+
+const TimeCell = ({ status }) => {
   const [timeLeft, setTimeLeft] = useState('');
 
   useEffect(() => {
@@ -24,15 +34,7 @@ const StatusCell = ({ status }) => {
     return () => clearInterval(interval);
   }, [status]);
 
-  const stateStr = status?.details || status?.state || 'Okay';
-  const isBad = status?.state === 'Hospital';
-  
-  return (
-    <div style={{ color: isBad ? 'var(--hp-nerve)' : 'inherit', display: 'flex', flexDirection: 'column' }}>
-      <span>{stateStr}</span>
-      {timeLeft && <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{timeLeft}</span>}
-    </div>
-  );
+  return timeLeft ? <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{timeLeft}</span> : null;
 };
 
 const FactionWarRoom = () => {
@@ -46,14 +48,26 @@ const FactionWarRoom = () => {
   const [warDetails, setWarDetails] = useState(null);
   const [countdown, setCountdown] = useState('');
   const [userAttacks, setUserAttacks] = useState({});
+  const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
 
   useEffect(() => {
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      @keyframes attackPulse {
+        0% { box-shadow: 0 0 5px #10b981; }
+        50% { box-shadow: 0 0 20px #10b981, 0 0 10px #10b981 inset; }
+        100% { box-shadow: 0 0 5px #10b981; }
+      }
+    `;
+    document.head.appendChild(styleEl);
+
     document.documentElement.style.setProperty('--accent-primary', '#ef4444');
     document.documentElement.style.setProperty('--accent-secondary', '#94a3b8');
     document.documentElement.style.setProperty('--accent-glow', 'rgba(239, 68, 68, 0.4)');
     document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at center, #1a0505 0%, #02040a 100%)');
 
     return () => {
+      document.head.removeChild(styleEl);
       document.documentElement.style.setProperty('--accent-primary', '#00f0ff');
       document.documentElement.style.setProperty('--accent-secondary', '#ff003c');
       document.documentElement.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
@@ -305,12 +319,81 @@ const FactionWarRoom = () => {
     );
   };
 
+  const requestSort = (key) => {
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+      direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+  };
+
   const renderSplitRoster = () => {
     const ourMembers = data.members ? Object.values(data.members) : [];
     
+    const enrichedMembers = enemyMembers.map(m => {
+       const apiScore = warDetails?.factions?.[m.faction_id]?.members?.[m.id]?.score || 0;
+       let wins = 0;
+       let losses = 0;
+       let calculatedScore = 0;
+       const enemyId = parseInt(m.id);
+       const warStart = warDetails?.start || 0;
+
+       if (userAttacks && Object.keys(userAttacks).length > 0) {
+          const myId = parseInt(userId);
+          Object.values(userAttacks).forEach(att => {
+             const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
+             if (warStart > 0 && attTime < warStart) return;
+             const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
+             const defId = parseInt(att.defender?.id || att.defender_id || 0);
+             const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
+             const defenderWon = ['Lost', 'Defended', 'Stalemate'].includes(att.result);
+             
+             if (attId === myId && defId === enemyId) {
+                if (attackerWon) wins++; else if (defenderWon) losses++;
+             } else if (attId === enemyId && defId === myId) {
+                if (attackerWon) losses++; else if (defenderWon) wins++;
+             }
+          });
+       }
+
+       if (data && data.attacks) {
+          Object.values(data.attacks).forEach(att => {
+             const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
+             if (warStart > 0 && attTime < warStart) return;
+             const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
+             const defId = parseInt(att.defender?.id || att.defender_id || 0);
+             const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
+             const defenderWon = ['Lost', 'Defended', 'Stalemate'].includes(att.result);
+             const respectGain = parseFloat(att.respect || att.respect_gain || 0);
+             
+             if (attId === enemyId && attackerWon) calculatedScore += respectGain;
+             if (defId === enemyId && defenderWon) calculatedScore += respectGain;
+          });
+       }
+
+       const warScore = calculatedScore > 0 ? calculatedScore : apiScore;
+       return { ...m, wins, losses, calculatedScore, warScore };
+    });
+
+    const sortedMembers = enrichedMembers.sort((a, b) => {
+       let aVal = 0, bVal = 0;
+       if (sortConfig.key === 'level') { aVal = a.level; bVal = b.level; }
+       else if (sortConfig.key === 'score') { aVal = a.warScore; bVal = b.warScore; }
+       else if (sortConfig.key === 'countdown') {
+          aVal = a.status?.until || Number.MAX_SAFE_INTEGER;
+          bVal = b.status?.until || Number.MAX_SAFE_INTEGER;
+          if (aVal === bVal) return b.level - a.level;
+       } else {
+          aVal = a.warScore; bVal = b.warScore;
+       }
+       
+       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+       if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+       return 0;
+    });
+
     return (
       <div className="roster-split-grid">
-        {/* Left Column: Enemy Faction */}
         <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
           <div style={{ padding: '16px', background: 'rgba(220, 38, 38, 0.1)', borderBottom: '2px solid var(--hp-nerve)' }}>
             <h2 style={{color: 'var(--hp-nerve)', textAlign: 'center'}}>Active Adversaries</h2>
@@ -318,103 +401,59 @@ const FactionWarRoom = () => {
           <table className="data-table" style={{ border: 'none' }}>
             <thead>
               <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
+                <th style={{ width: '40px' }}>O</th>
                 <th>Operative</th>
-                <th>Level</th>
-                <th>Score</th>
+                <th onClick={() => requestSort('level')} style={{ cursor: 'pointer' }}>Level {sortConfig.key === 'level' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => requestSort('score')} style={{ cursor: 'pointer' }}>Score {sortConfig.key === 'score' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th>Status</th>
+                <th onClick={() => requestSort('countdown')} style={{ cursor: 'pointer' }}>Time {sortConfig.key === 'countdown' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th>History</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-              {enemyMembers.length === 0 && (
-                <tr><td colSpan="6" className="text-center text-muted">No Enemies Detected.</td></tr>
+              {sortedMembers.length === 0 && (
+                <tr><td colSpan="8" className="text-center text-muted">No Enemies Detected.</td></tr>
               )}
-              {enemyMembers.sort((a,b) => b.level - a.level).map(m => {
-                const apiScore = warDetails?.factions?.[m.faction_id]?.members?.[m.id]?.score || 0;
-                
-                let wins = 0;
-                let losses = 0;
-                let calculatedScore = 0;
-                
-                const enemyId = parseInt(m.id);
-                const warStart = warDetails?.start || 0;
-
-                // Calculate personal history using userAttacks
-                if (userAttacks && Object.keys(userAttacks).length > 0) {
-                   const myId = parseInt(userId);
-                   Object.values(userAttacks).forEach(att => {
-                      const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
-                      if (warStart > 0 && attTime < warStart) return;
-                      
-                      const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
-                      const defId = parseInt(att.defender?.id || att.defender_id || 0);
-                      
-                      const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
-                      const defenderWon = ['Lost', 'Defended', 'Stalemate'].includes(att.result);
-                      
-                      if (attId === myId && defId === enemyId) {
-                         if (attackerWon) wins++;
-                         else if (defenderWon) losses++;
-                      } else if (attId === enemyId && defId === myId) {
-                         if (attackerWon) losses++;
-                         else if (defenderWon) wins++;
-                      }
-                   });
-                }
-                
-                // Calculate faction score contribution using data.attacks
-                if (data && data.attacks) {
-                   Object.values(data.attacks).forEach(att => {
-                      const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
-                      if (warStart > 0 && attTime < warStart) return;
-                      
-                      const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
-                      const defId = parseInt(att.defender?.id || att.defender_id || 0);
-                      
-                      const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
-                      const defenderWon = ['Lost', 'Defended', 'Stalemate'].includes(att.result);
-                      
-                      const respectGain = parseFloat(att.respect || att.respect_gain || 0);
-                      
-                      if (attId === enemyId && attackerWon) calculatedScore += respectGain;
-                      if (defId === enemyId && defenderWon) calculatedScore += respectGain;
-                   });
-                }
-                
-                const warScore = calculatedScore > 0 ? calculatedScore : apiScore;
+              {sortedMembers.map(m => {
+                const isOkay = ['Okay'].includes(m.status?.state);
+                const rowColor = isOkay ? '#10b981' : 'inherit';
                 
                 return (
-                  <tr key={m.id}>
+                  <tr key={m.id} style={{ color: rowColor }}>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center' }}>
                           <span style={{
-                            width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                            width: '10px', height: '10px', borderRadius: '50%',
                             backgroundColor: m.last_action?.status === 'Online' ? '#10b981' : (m.last_action?.status === 'Idle' ? '#f59e0b' : 'transparent'),
                             border: m.last_action?.status === 'Online' || m.last_action?.status === 'Idle' ? 'none' : '2px solid #64748b',
                             boxShadow: m.last_action?.status === 'Online' ? '0 0 8px #10b981' : (m.last_action?.status === 'Idle' ? '0 0 8px #f59e0b' : 'none')
                           }} title={m.last_action?.status || 'Offline'}></span>
-                          {m.name}
-                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontWeight: 'bold' }}>{m.name}</span>
                         <a 
                           href={`https://www.torn.com/profiles.php?XID=${m.id}`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
-                          className="text-muted" 
-                          style={{ textDecoration: 'none', fontSize: '0.85rem' }}
+                          style={{ textDecoration: 'none', fontSize: '0.85rem', color: isOkay ? '#10b981' : 'var(--text-muted)' }}
                         >
                           [{m.id}]
                         </a>
                       </div>
                     </td>
                     <td>{m.level}</td>
-                    <td style={{ fontWeight: 'bold', color: warScore > 0 ? 'var(--accent-primary)' : 'inherit' }}>{typeof warScore === 'number' && !Number.isInteger(warScore) ? warScore.toFixed(2) : warScore}</td>
+                    <td style={{ fontWeight: 'bold', color: m.warScore > 0 && !isOkay ? 'var(--accent-primary)' : 'inherit' }}>
+                      {typeof m.warScore === 'number' && !Number.isInteger(m.warScore) ? m.warScore.toFixed(2) : m.warScore}
+                    </td>
                     <td><StatusCell status={m.status} /></td>
+                    <td><TimeCell status={m.status} /></td>
                     <td>
                       <div style={{ fontSize: '0.85rem', lineHeight: '1.2' }}>
-                        <div style={{ color: '#10b981', fontWeight: 'bold' }}>W: {wins}</div>
-                        <div style={{ color: '#ef4444', fontWeight: 'bold' }}>L: {losses}</div>
+                        <div style={{ color: '#10b981', fontWeight: 'bold' }}>W: {m.wins}</div>
+                        <div style={{ color: '#ef4444', fontWeight: 'bold' }}>L: {m.losses}</div>
                       </div>
                     </td>
                     <td>
@@ -423,7 +462,12 @@ const FactionWarRoom = () => {
                         target="_blank" 
                         rel="noopener noreferrer" 
                         className="action-button small" 
-                        style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', backgroundColor: 'var(--hp-nerve)', color: '#fff', border: 'none', display: 'inline-block' }}
+                        style={{ 
+                           padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', 
+                           backgroundColor: isOkay ? '#10b981' : 'var(--hp-nerve)', 
+                           color: '#fff', border: 'none', display: 'inline-block',
+                           animation: isOkay ? 'attackPulse 1.5s infinite' : 'none'
+                        }}
                       >
                         Attack
                       </a>
