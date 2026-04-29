@@ -45,9 +45,6 @@ const FactionWarRoom = () => {
   const [error, setError] = useState(null);
   const [warDetails, setWarDetails] = useState(null);
   const [countdown, setCountdown] = useState('');
-  
-  const [targetAnalysis, setTargetAnalysis] = useState({});
-  const [analysisLoading, setAnalysisLoading] = useState({});
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-primary', '#ef4444');
@@ -77,13 +74,19 @@ const FactionWarRoom = () => {
         const enemyFactions = new Set();
         const ourFid = res.id || parseInt(getFactionId());
         
+        let activeWarDetails = null;
+        if (res.rankedwars) {
+           const rws = Object.values(res.rankedwars);
+           if (rws.length > 0) activeWarDetails = rws[0];
+        }
+        
         // Parse the new /faction/wars schema safely
         if (warsRes.wars?.ranked) {
           const raw = warsRes.wars.ranked;
           const rankedArr = Array.isArray(raw) ? raw : (raw.war_id || raw.start || raw.factions) ? [raw] : Object.values(raw);
           rankedArr.forEach(rw => {
              if (!rw) return;
-             if (rw.war_id || rw.start) setWarDetails(rw);
+             if (!activeWarDetails && (rw.war_id || rw.start)) activeWarDetails = rw;
              
              if (rw.factions) {
                const rawF = rw.factions;
@@ -94,6 +97,8 @@ const FactionWarRoom = () => {
              }
           });
         }
+        
+        if (activeWarDetails) setWarDetails(activeWarDetails);
         
         // Add territory or standard raids safely
         if (warsRes.wars?.territory) {
@@ -162,78 +167,6 @@ const FactionWarRoom = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [warDetails]);
-
-  const handleAnalyze = async (enemyId, enemyLevel) => {
-    setAnalysisLoading(prev => ({...prev, [enemyId]: true}));
-    try {
-      const ourStats = await fetchUserSpecific('personalstats').catch(() => ({}));
-      const enemyStats = await fetchAnyUserSpecific(enemyId, 'personalstats').catch(() => ({}));
-      
-      const ourP = ourStats.personalstats || {};
-      const enemyP = enemyStats.personalstats || {};
-      
-      const ourXanax = ourP.xantaken || 0;
-      const enemyXanax = enemyP.xantaken || 0;
-      
-      const ourRefills = (ourP.refills || 0) + (ourP.energyrefills || 0);
-      const enemyRefills = (enemyP.refills || 0) + (enemyP.energyrefills || 0);
-      
-      let score = 0;
-      let reasons = [];
-      
-      const levelDiff = userLevel - enemyLevel;
-      score += (levelDiff * 0.5);
-      reasons.push(levelDiff >= 0 ? `Lvl Diff (+${levelDiff})` : `Lvl Diff (${levelDiff})`);
-
-      const xanaxDiff = ourXanax - enemyXanax;
-      score += (xanaxDiff * 0.25);
-      reasons.push(xanaxDiff >= 0 ? `Xanax Diff (+${xanaxDiff})` : `Xanax Diff (${xanaxDiff})`);
-
-      const refillsDiff = ourRefills - enemyRefills;
-      score += (refillsDiff * 0.15);
-      reasons.push(refillsDiff >= 0 ? `Refills Diff (+${refillsDiff})` : `Refills Diff (${refillsDiff})`);
-      
-      // Past Attacks history
-      let wins = 0; let losses = 0;
-      if (data && data.attacks) {
-         Object.values(data.attacks).forEach(att => {
-           // If we attacked them
-           if (att.attacker_id === userId && att.defender_id === enemyId) {
-             if (att.result === 'Hospitalized' || att.result === 'Mugged' || att.result === 'Special') wins++;
-             else losses++;
-           }
-           // If they attacked us
-           if (att.defender_id === userId && att.attacker_id === enemyId) {
-             if (att.result === 'Hospitalized' || att.result === 'Mugged' || att.result === 'Special') losses++;
-             else wins++;
-           }
-         });
-      }
-      
-      let notRecommended = false;
-      if (losses > 0 && wins === 0) {
-         notRecommended = true;
-         reasons.push(`UNVIABLE TARGET (Losses: ${losses}, Wins: 0)`);
-         score = -9999;
-      } else {
-         if (wins > losses) { score += 1; reasons.push(`Past Wins (${wins}-${losses})`); }
-         else if (losses > wins) { score -= 1; reasons.push(`Past Losses (${wins}-${losses})`); }
-         else if (wins > 0 || losses > 0) { reasons.push(`History (${wins}-${losses})`); }
-      }
-      
-      reasons.push("Tactics: LEAVE (Maximize hospital turnover)");
-      
-      setTargetAnalysis(prev => ({
-        ...prev, 
-        [enemyId]: { score: score === -9999 ? 'AVOID' : score.toFixed(2), reasons, loaded: true, notRecommended }
-      }));
-    } catch(err) {
-      setTargetAnalysis(prev => ({...prev, [enemyId]: { error: 'Failed API Cache' }}));
-    } finally {
-      setAnalysisLoading(prev => ({...prev, [enemyId]: false}));
-    }
-  };
-
 
   const renderSideRadar = () => {
     if (enemyMembers.length === 0) return <div className="text-muted text-sm mt-2">No Active Wars Detected.</div>;
@@ -373,7 +306,7 @@ const FactionWarRoom = () => {
                 <th>Level</th>
                 <th>Score</th>
                 <th>Status</th>
-                <th>Intel</th>
+                <th>History</th>
                 <th>Action</th>
               </tr>
             </thead>
@@ -382,18 +315,26 @@ const FactionWarRoom = () => {
                 <tr><td colSpan="6" className="text-center text-muted">No Enemies Detected.</td></tr>
               )}
               {enemyMembers.sort((a,b) => b.level - a.level).map(m => {
-                const analysis = targetAnalysis[m.id];
-                const loading = analysisLoading[m.id];
                 const warScore = warDetails?.factions?.[m.faction_id]?.members?.[m.id]?.score || 0;
                 
-                let bgStyle = 'transparent';
-                if (analysis && analysis.loaded) {
-                   if (analysis.notRecommended) bgStyle = 'rgba(220, 38, 38, 0.1)';
-                   else if (parseFloat(analysis.score) > 0) bgStyle = 'rgba(50, 205, 50, 0.1)';
+                let wins = 0;
+                let losses = 0;
+                if (data && data.attacks) {
+                   Object.values(data.attacks).forEach(att => {
+                      const attId = att.attacker?.id || att.attacker_id || 0;
+                      const defId = att.defender?.id || att.defender_id || 0;
+                      if (attId === userId && defId === m.id) {
+                         if (['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result)) wins++;
+                         else losses++;
+                      } else if (attId === m.id && defId === userId) {
+                         if (['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result)) losses++;
+                         else wins++;
+                      }
+                   });
                 }
                 
                 return (
-                  <tr key={m.id} style={{ backgroundColor: bgStyle }}>
+                  <tr key={m.id}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span style={{ fontWeight: 'bold' }}>{m.name}</span>
@@ -409,20 +350,13 @@ const FactionWarRoom = () => {
                       </div>
                     </td>
                     <td>{m.level}</td>
-                    <td style={{ fontWeight: 'bold', color: warScore > 0 ? 'var(--accent-primary)' : 'inherit' }}>{warScore}</td>
+                    <td style={{ fontWeight: 'bold', color: warScore > 0 ? 'var(--accent-primary)' : 'inherit' }}>{typeof warScore === 'number' && !Number.isInteger(warScore) ? warScore.toFixed(2) : warScore}</td>
                     <td><StatusCell status={m.status} /></td>
                     <td>
-                      {loading ? <span className="text-muted">Scanning...</span> : analysis ? (
-                        <div style={{ fontSize: '0.8rem' }}>
-                          <div style={{ color: analysis.notRecommended ? 'var(--hp-nerve)' : (parseFloat(analysis.score) > 0 ? 'var(--accent-primary)' : 'inherit'), fontWeight: 'bold' }}>
-                             {analysis.notRecommended ? 'AVOID' : `Score: ${analysis.score}`}
-                          </div>
-                          {(analysis.reasons || []).map((r, i) => <div key={i} className={analysis.notRecommended ? 'text-danger' : 'text-muted'} style={{fontSize: '0.7rem', color: analysis.notRecommended ? 'var(--hp-nerve)' : ''}}>{r}</div>)}
-                          {analysis.error && <span className="text-muted">{analysis.error}</span>}
-                        </div>
-                      ) : (
-                        <button className="action-button small" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => handleAnalyze(m.id, m.level)}>Scan</button>
-                      )}
+                      <div style={{ fontSize: '0.85rem', lineHeight: '1.2' }}>
+                        <div style={{ color: '#10b981', fontWeight: 'bold' }}>W: {wins}</div>
+                        <div style={{ color: '#ef4444', fontWeight: 'bold' }}>L: {losses}</div>
+                      </div>
                     </td>
                     <td>
                       <a 
