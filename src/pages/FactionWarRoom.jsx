@@ -556,14 +556,26 @@ const FactionWarRoom = () => {
   const renderMVPs = () => {
     if (!warDetails || !warDetails.factions) return null;
     const ourFid = data?.id || parseInt(getFactionId());
-    const ourFaction = warDetails.factions[ourFid];
+    
+    const factionsData = warDetails.factions;
+    const ourFaction = Array.isArray(factionsData) 
+        ? factionsData.find(f => parseInt(f.id) === ourFid || f.name === factionName) 
+        : (factionsData[ourFid] || Object.values(factionsData).find(f => parseInt(f.id) === ourFid || f.name === factionName));
+        
     if (!ourFaction || !ourFaction.members) return null;
 
     const topMembers = Object.values(ourFaction.members)
       .sort((a, b) => (b.score || 0) - (a.score || 0))
       .slice(0, 3);
 
-    if (topMembers.length === 0) return null;
+    if (topMembers.length === 0) return (
+      <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid #fbbf24', margin: 0 }}>
+        <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>🏆</span> War MVPs
+        </h3>
+        <div className="text-muted">No combat data available yet.</div>
+      </div>
+    );
 
     const medals = [
       { color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)', icon: '🥇' },
@@ -642,13 +654,6 @@ const FactionWarRoom = () => {
                 </div>
               )}
               {renderChainMetrics()}
-              
-              <div className="metric-card" style={{ margin: 0 }}>
-                <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Respect Balance <span style={{ color: 'var(--text-muted)' }}></span>
-                </h3>
-                <div className="metric-value" style={{ color: 'var(--accent-primary)' }}>{(data.respect || 0).toLocaleString()}</div>
-              </div>
               
               <div className="metric-card" style={{ margin: 0 }}>
                 <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
