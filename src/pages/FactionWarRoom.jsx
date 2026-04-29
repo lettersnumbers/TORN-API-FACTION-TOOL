@@ -302,7 +302,20 @@ const FactionWarRoom = () => {
                 
                 return (
                   <tr key={m.id} style={{ backgroundColor: bgStyle }}>
-                    <td style={{ fontWeight: 'bold' }}>{m.name} <span className="text-muted">[{m.id}]</span></td>
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontWeight: 'bold' }}>{m.name}</span>
+                        <a 
+                          href={`https://www.torn.com/profiles.php?XID=${m.id}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-muted" 
+                          style={{ textDecoration: 'none', fontSize: '0.85rem' }}
+                        >
+                          [{m.id}]
+                        </a>
+                      </div>
+                    </td>
                     <td>{m.level}</td>
                     <td><StatusCell status={m.status} /></td>
                     <td>
@@ -321,34 +334,6 @@ const FactionWarRoom = () => {
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Right Column: Logged In Faction */}
-        <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
-          <div style={{ padding: '16px', background: 'rgba(50, 205, 50, 0.1)', borderBottom: '2px solid var(--accent-primary)' }}>
-            <h2 style={{color: 'var(--accent-primary)', textAlign: 'center'}}>{factionName}</h2>
-          </div>
-          <table className="data-table" style={{ border: 'none' }}>
-            <thead>
-              <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
-                <th>Operative</th>
-                <th>Level</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ourMembers.length === 0 && (
-                <tr><td colSpan="3" className="text-center text-muted">Roster Sync Failed.</td></tr>
-              )}
-              {ourMembers.sort((a,b) => b.level - a.level).map(m => (
-                <tr key={m.id}>
-                  <td style={{ fontWeight: 'bold' }}>{m.name} <span className="text-muted">[{m.id}]</span></td>
-                  <td>{m.level}</td>
-                  <td><StatusCell status={m.status} /></td>
-                </tr>
-              ))}
             </tbody>
           </table>
         </div>

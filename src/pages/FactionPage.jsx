@@ -218,7 +218,7 @@ const FactionPage = () => {
 
       <div className="data-table-container glow-panel">
         <div className="table-header">
-          <h2>Active Roster</h2>
+          <h2>{faction?.name || 'Active Roster'}</h2>
         </div>
         <div className="table-responsive">
           <table className="data-table">
@@ -249,10 +249,21 @@ const FactionPage = () => {
                         style={{ cursor: 'pointer' }}
                       >
                         <td>
-                          <div className="member-name">
-                            <span className={`status-dot ${member.status?.state === 'Online' ? 'online' : member.status?.state === 'Idle' ? 'idle' : 'offline'}`}></span>
-                            <span style={{color: isExpanded ? 'var(--accent-primary)' : 'inherit', transition: 'color 0.2s', fontWeight: isExpanded ? 'bold' : 'normal'}}>{member.name}</span> 
-                            <span className="member-id">[{member.id}]</span>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <div className="member-name">
+                              <span className={`status-dot ${member.status?.state === 'Online' ? 'online' : member.status?.state === 'Idle' ? 'idle' : 'offline'}`}></span>
+                              <span style={{color: isExpanded ? 'var(--accent-primary)' : 'inherit', transition: 'color 0.2s', fontWeight: isExpanded ? 'bold' : 'normal'}}>{member.name}</span> 
+                            </div>
+                            <a 
+                              href={`https://www.torn.com/profiles.php?XID=${member.id}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="member-id" 
+                              style={{ textDecoration: 'none', paddingLeft: '20px' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              [{member.id}]
+                            </a>
                           </div>
                         </td>
                         <td>{member.level}</td>

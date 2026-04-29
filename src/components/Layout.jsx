@@ -50,7 +50,7 @@ const Layout = ({ children }) => {
               <span>{factionName}</span>
             </NavLink>
             <div className="sub-menu">
-              <NavLink to="/" end onClick={() => setIsMobileOpen(false)} className={({isActive}) => isActive ? "sub-item active" : "sub-item"}>Active Roster</NavLink>
+              <NavLink to="/" end onClick={() => setIsMobileOpen(false)} className={({isActive}) => isActive ? "sub-item active" : "sub-item"}>{factionName}</NavLink>
               <NavLink to="/faction/war-room" onClick={() => setIsMobileOpen(false)} className={({isActive}) => isActive ? "sub-item active" : "sub-item"}>War Room</NavLink>
               <NavLink to="/faction/attacks" onClick={() => setIsMobileOpen(false)} className={({isActive}) => isActive ? "sub-item active" : "sub-item"}>Attack Log</NavLink>
               <NavLink to="/faction/armory" onClick={() => setIsMobileOpen(false)} className={({isActive}) => isActive ? "sub-item active" : "sub-item"}>Armory</NavLink>
