@@ -156,13 +156,17 @@ const FactionWarRoom = () => {
     const interval = setInterval(() => {
       const now = Math.floor(Date.now() / 1000);
       const diff = warDetails.start - now;
-      if (diff <= 0) {
-         setCountdown('WAR IS ACTIVE');
-      } else {
+      if (diff > 0) {
          const h = Math.floor(diff / 3600);
          const m = Math.floor((diff % 3600) / 60);
          const s = diff % 60;
-         setCountdown(`${h}h ${m}m ${s}s`);
+         setCountdown(`STARTS IN: ${h}h ${m}m ${s}s`);
+      } else {
+         const duration = now - warDetails.start;
+         const h = Math.floor(duration / 3600);
+         const m = Math.floor((duration % 3600) / 60);
+         const s = duration % 60;
+         setCountdown(`ACTIVE: ${h}h ${m}m ${s}s`);
       }
     }, 1000);
     return () => clearInterval(interval);
@@ -322,15 +326,23 @@ const FactionWarRoom = () => {
                 if (data && data.attacks) {
                    const myId = parseInt(userId);
                    const enemyId = parseInt(m.id);
+                   const warStart = warDetails?.start || 0;
                    Object.values(data.attacks).forEach(att => {
+                      const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
+                      if (warStart > 0 && attTime < warStart) return;
+                      
                       const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
                       const defId = parseInt(att.defender?.id || att.defender_id || 0);
+                      
+                      const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
+                      const defenderWon = ['Lost', 'Defended'].includes(att.result);
+                      
                       if (attId === myId && defId === enemyId) {
-                         if (['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result)) wins++;
-                         else losses++;
+                         if (attackerWon) wins++;
+                         else if (defenderWon) losses++;
                       } else if (attId === enemyId && defId === myId) {
-                         if (['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result)) losses++;
-                         else wins++;
+                         if (attackerWon) losses++;
+                         else if (defenderWon) wins++;
                       }
                    });
                 }
@@ -461,7 +473,7 @@ const FactionWarRoom = () => {
                       RANKED WAR
                     </h2>
                     <div style={{ fontSize: '1rem', fontFamily: 'monospace', color: 'var(--text-main)' }}>
-                      T-MINUS: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{countdown || 'CALC...'}</span>
+                      <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{countdown || 'CALCULATING...'}</span>
                     </div>
                   </div>
                   <div className="mt-2" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
