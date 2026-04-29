@@ -267,6 +267,76 @@ const FactionWarRoom = () => {
     );
   };
 
+  const renderAttackFeed = () => {
+    if (!data || !data.attacks) return (
+      <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
+        <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderBottom: '2px solid #f59e0b' }}>
+          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent Combat Operations</h2>
+        </div>
+        <div className="text-center text-muted mt-4">No attack data available.</div>
+      </div>
+    );
+    
+    const ourFid = data.id || parseInt(getFactionId());
+    const attacksArray = Object.values(data.attacks).sort((a, b) => b.timestamp_ended - a.timestamp_ended);
+    
+    return (
+      <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderBottom: '2px solid #f59e0b' }}>
+          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent Combat Operations</h2>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', maxHeight: '750px' }}>
+          {attacksArray.length === 0 ? (
+            <div className="text-center text-muted mt-4">No recent attacks recorded.</div>
+          ) : (
+            attacksArray.slice(0, 100).map(att => {
+              const isWeAttacked = att.attacker_faction === ourFid;
+              
+              const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special'].includes(att.result);
+              const defenderWon = ['Defended'].includes(att.result);
+              
+              let isWin = false;
+              let isLoss = false;
+              if (isWeAttacked) {
+                if (attackerWon) isWin = true;
+                if (defenderWon) isLoss = true;
+              } else {
+                if (attackerWon) isLoss = true;
+                if (defenderWon) isWin = true;
+              }
+              
+              const color = isWin ? '#10b981' : isLoss ? '#ef4444' : 'var(--text-muted)';
+              const respectGain = att.respect_gain || 0;
+              const respectStr = (isWin || respectGain > 0) ? `+${respectGain.toFixed(2)}` : respectGain.toFixed(2);
+              
+              return (
+                <div key={att.code || att.timestamp_ended + att.attacker_id} style={{ 
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                  padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  backgroundColor: isWin ? 'rgba(16, 185, 129, 0.05)' : isLoss ? 'rgba(239, 68, 68, 0.05)' : 'transparent'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '0.95rem' }}>
+                       <span style={{ fontWeight: isWeAttacked ? 'bold' : 'normal', color: isWeAttacked ? '#fff' : 'inherit' }}>{att.attacker_name}</span>
+                       <span className="text-muted" style={{ margin: '0 8px' }}>vs</span>
+                       <span style={{ fontWeight: !isWeAttacked ? 'bold' : 'normal', color: !isWeAttacked ? '#fff' : 'inherit' }}>{att.defender_name}</span>
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      {new Date(att.timestamp_ended * 1000).toLocaleTimeString()} - {att.result} {att.stealth ? '(Stealthed)' : ''}
+                    </div>
+                  </div>
+                  <div style={{ color, fontWeight: 'bold', fontSize: '1.15rem', textAlign: 'right' }}>
+                    {respectStr}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderSplitRoster = () => {
     const ourMembers = data.members ? Object.values(data.members) : [];
     
@@ -337,6 +407,8 @@ const FactionWarRoom = () => {
             </tbody>
           </table>
         </div>
+        {/* Right Column: Attack Feed */}
+        {renderAttackFeed()}
       </div>
     );
   };
