@@ -638,9 +638,9 @@ const FactionWarRoom = () => {
   const renderVitals = () => {
     if (!userVitals) {
        return (
-         <div className="glow-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '3px solid var(--accent-primary)', margin: 0 }}>
-           <h3 style={{ margin: '0 0 8px 0', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Vital Signs</h3>
-           <div className="text-muted">Loading vitals...</div>
+         <div className="glow-panel" style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '16px', borderTop: '2px solid var(--accent-primary)', margin: 0 }}>
+           <h3 style={{ margin: 0, color: 'var(--accent-primary)', fontSize: '1rem', whiteSpace: 'nowrap' }}>Vital Signs</h3>
+           <div className="text-muted" style={{ fontSize: '0.85rem' }}>Loading vitals...</div>
          </div>
        );
     }
@@ -650,12 +650,12 @@ const FactionWarRoom = () => {
     const renderBar = (label, current, max, color) => {
        const pct = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0;
        return (
-         <div style={{ marginBottom: '12px' }}>
-           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>
+         <div style={{ flex: 1, minWidth: '80px' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '4px' }}>
              <span style={{ color: '#fff' }}>{label}</span>
              <span className="text-muted">{current} / {max}</span>
            </div>
-           <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+           <div style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
              <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color, boxShadow: `0 0 8px ${color}`, transition: 'width 0.5s ease-out' }}></div>
            </div>
          </div>
@@ -663,22 +663,27 @@ const FactionWarRoom = () => {
     };
 
     return (
-      <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid var(--accent-primary)', margin: 0 }}>
-        <h3 style={{ margin: '0 0 16px 0', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Vital Signs</h3>
-        {renderBar('Life', life?.current || 0, life?.maximum || 0, '#3b82f6')}
-        {renderBar('Energy', energy?.current || 0, energy?.maximum || 0, '#10b981')}
-        {renderBar('Nerve', nerve?.current || 0, nerve?.maximum || 0, '#ef4444')}
-        {renderBar('Happy', happy?.current || 0, happy?.maximum || 0, '#f59e0b')}
+      <div className="glow-panel" style={{ padding: '12px 20px', borderTop: '2px solid var(--accent-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '24px' }}>
+        <h3 style={{ margin: 0, color: 'var(--accent-primary)', fontSize: '1rem', whiteSpace: 'nowrap' }}>Vitals</h3>
+        <div style={{ display: 'flex', gap: '16px', flex: 1, flexWrap: 'wrap' }}>
+          {renderBar('Life', life?.current || 0, life?.maximum || 0, '#3b82f6')}
+          {renderBar('Energy', energy?.current || 0, energy?.maximum || 0, '#10b981')}
+          {renderBar('Nerve', nerve?.current || 0, nerve?.maximum || 0, '#ef4444')}
+          {renderBar('Happy', happy?.current || 0, happy?.maximum || 0, '#f59e0b')}
+        </div>
       </div>
     );
   };
 
   return (
     <div className="page-container">
-      <div className="page-header d-flex-between">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
         <div>
           <h1>War Room :: <span className="accent-text">{factionName}</span></h1>
-          <p>Active conflicts, chain status, and recent combat operations.</p>
+          <p style={{ margin: 0 }}>Active conflicts, chain status, and recent combat operations.</p>
+        </div>
+        <div style={{ flex: '1', maxWidth: '600px' }}>
+          {renderVitals()}
         </div>
         <button className="action-button small" onClick={() => window.location.reload()}>Refresh Feed</button>
       </div>
@@ -695,7 +700,6 @@ const FactionWarRoom = () => {
             
             {/* Right Sidebar */}
             <div style={{ flex: '0 0 330px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {renderVitals()}
               {warDetails && (
                 <div className="glow-panel p-3" style={{ background: 'linear-gradient(45deg, rgba(220, 38, 38, 0.05), rgba(0,0,0,0))', borderLeft: '4px solid var(--hp-nerve)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
