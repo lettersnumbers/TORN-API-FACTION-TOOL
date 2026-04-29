@@ -553,6 +553,53 @@ const FactionWarRoom = () => {
      );
   };
 
+  const renderMVPs = () => {
+    if (!warDetails || !warDetails.factions) return null;
+    const ourFid = data?.id || parseInt(getFactionId());
+    const ourFaction = warDetails.factions[ourFid];
+    if (!ourFaction || !ourFaction.members) return null;
+
+    const topMembers = Object.values(ourFaction.members)
+      .sort((a, b) => (b.score || 0) - (a.score || 0))
+      .slice(0, 3);
+
+    if (topMembers.length === 0) return null;
+
+    const medals = [
+      { color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)', icon: '🥇' },
+      { color: '#cbd5e1', bg: 'rgba(203, 213, 225, 0.1)', icon: '🥈' },
+      { color: '#b45309', bg: 'rgba(180, 83, 9, 0.15)', icon: '🥉' }
+    ];
+
+    return (
+      <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid #fbbf24', margin: 0 }}>
+        <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span>🏆</span> War MVPs
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {topMembers.map((m, idx) => {
+             const medal = medals[idx] || medals[2];
+             return (
+               <div key={m.id || m.name} style={{
+                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                 padding: '8px 12px', background: medal.bg, borderRadius: '4px',
+                 borderLeft: `3px solid ${medal.color}`
+               }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                   <span style={{ fontSize: '1.2rem' }}>{medal.icon}</span>
+                   <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#fff' }}>{m.name}</span>
+                 </div>
+                 <div style={{ fontWeight: 'bold', color: medal.color, fontSize: '1.1rem' }}>
+                   {m.score || 0}
+                 </div>
+               </div>
+             );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header d-flex-between">
@@ -605,11 +652,12 @@ const FactionWarRoom = () => {
               
               <div className="metric-card" style={{ margin: 0 }}>
                 <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   Recent Attacks 
-                   <span title="Total faction attacks within the last 24h cycle" style={{ cursor: 'help', fontSize: '0.8rem', color: 'var(--text-muted)' }}>ℹ️</span>
+                  Respect Balance <span style={{ color: 'var(--text-muted)' }}></span>
                 </h3>
-                <div className="metric-value">{data.attacks ? Object.keys(data.attacks).length : 0}</div>
+                <div className="metric-value" style={{ color: 'var(--accent-primary)' }}>{(data.respect || 0).toLocaleString()}</div>
               </div>
+              
+              {renderMVPs()}
 
               <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid var(--accent-primary)' }}>
                 <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', margin: 0 }}>
