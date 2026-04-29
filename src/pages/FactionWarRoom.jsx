@@ -137,7 +137,7 @@ const FactionWarRoom = () => {
         if (active) {
           setData(res);
           setUserLevel(userRes.level || 0);
-          setUserId(userRes.player_id || 0);
+          setUserId(parseInt(userRes.player_id || userRes.id) || 0);
           setEnemyMembers(enemies);
         }
       } catch (err) {
