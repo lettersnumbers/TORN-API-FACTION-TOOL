@@ -456,7 +456,7 @@ const FactionWarRoom = () => {
     });
 
     return (
-      <div className="roster-split-grid">
+      <div>
         <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
           <div style={{ padding: '16px', background: 'rgba(220, 38, 38, 0.1)', borderBottom: '2px solid var(--hp-nerve)' }}>
             <h3 style={{ color: 'var(--hp-nerve)', margin: 0, textAlign: 'center', textTransform: 'uppercase' }}>
@@ -543,8 +543,6 @@ const FactionWarRoom = () => {
             </tbody>
           </table>
         </div>
-        {/* Right Column: Attack Feed */}
-        {renderAttackFeed()}
       </div>
     );
   };
@@ -662,7 +660,26 @@ const FactionWarRoom = () => {
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
         <div>
           <h1>War Room :: <span className="accent-text">{factionName}</span></h1>
-          <p style={{ margin: 0 }}>Active conflicts, chain status, and recent combat operations.</p>
+          {warDetails ? (() => {
+             const ourFid = data?.id || parseInt(getFactionId());
+             const fData = warDetails.factions || {};
+             const fList = Array.isArray(fData) ? fData : Object.values(fData);
+             const us = fList.find(f => parseInt(f.id) === ourFid || f.name === factionName);
+             const them = fList.find(f => parseInt(f.id) !== ourFid && f.name !== factionName);
+             const target = warDetails.target || 0;
+             return (
+               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '4px' }}>
+                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Duration: <strong style={{ color: 'var(--accent-primary)' }}>{countdown || 'CALCULATING...'}</strong></span>
+                 {target > 0 && (
+                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                     SCORE: <strong style={{ color: '#10b981' }}>{us?.score || 0}</strong> / <strong style={{ color: '#ef4444' }}>{them?.score || 0}</strong> <span style={{opacity: 0.7}}>(Target: {target})</span>
+                   </span>
+                 )}
+               </div>
+             );
+          })() : (
+            <p style={{ margin: 0 }}>Active conflicts, chain status, and recent combat operations.</p>
+          )}
         </div>
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           {renderChainMetrics()}
@@ -713,41 +730,8 @@ const FactionWarRoom = () => {
             
             {/* Right Sidebar */}
             <div style={{ flex: '0 0 330px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {warDetails && (
-                <div className="glow-panel p-3" style={{ background: 'linear-gradient(45deg, rgba(220, 38, 38, 0.05), rgba(0,0,0,0))', borderLeft: '4px solid var(--hp-nerve)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                    <h2 style={{ color: 'var(--hp-nerve)', margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="pulse-dot" style={{ backgroundColor: 'var(--hp-nerve)', boxShadow: '0 0 8px var(--hp-nerve)' }}></span>
-                      RANKED WAR
-                    </h2>
-                    <div style={{ fontSize: '1rem', fontFamily: 'monospace', color: 'var(--text-main)' }}>
-                      <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{countdown || 'CALCULATING...'}</span>
-                    </div>
-                  </div>
-                  <div className="mt-2" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                     <p style={{ color: 'var(--text-main)', fontWeight: 'bold', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                       <span style={{ color: '#ffaa00' }}>⚠️</span> ROE:
-                     </p>
-                     Both sides will attack at the same time. No attacking onliners. There will be no flying except for rehabing and no turtling. We will med out if needed for them and vice versa. We will stop at 2k. If they reach 3k before we get our points they will stop so we can get them. Once we reach our 2k points they will attack till the war finishes.
-                  </div>
-                </div>
-              )}
-              
-              <div className="metric-card" style={{ margin: 0 }}>
-                <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  Respect Balance <span style={{ color: 'var(--text-muted)' }}></span>
-                </h3>
-                <div className="metric-value" style={{ color: 'var(--accent-primary)' }}>{(data.respect || 0).toLocaleString()}</div>
-              </div>
-              
               {renderMVPs()}
-
-              <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid var(--accent-primary)' }}>
-                <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', margin: 0 }}>
-                  <span className="pulse-dot"></span> Geographic Radar
-                </h3>
-                {renderSideRadar()}
-              </div>
+              {renderAttackFeed()}
             </div>
           </div>
         </>
