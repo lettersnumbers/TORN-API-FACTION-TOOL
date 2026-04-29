@@ -337,7 +337,15 @@ const FactionWarRoom = () => {
                   <tr key={m.id}>
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontWeight: 'bold' }}>{m.name}</span>
+                        <span style={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
+                            backgroundColor: m.last_action?.status === 'Online' ? '#10b981' : (m.last_action?.status === 'Idle' ? '#f59e0b' : 'transparent'),
+                            border: m.last_action?.status === 'Online' || m.last_action?.status === 'Idle' ? 'none' : '2px solid #64748b',
+                            boxShadow: m.last_action?.status === 'Online' ? '0 0 8px #10b981' : (m.last_action?.status === 'Idle' ? '0 0 8px #f59e0b' : 'none')
+                          }} title={m.last_action?.status || 'Offline'}></span>
+                          {m.name}
+                        </span>
                         <a 
                           href={`https://www.torn.com/profiles.php?XID=${m.id}`} 
                           target="_blank" 
@@ -433,26 +441,6 @@ const FactionWarRoom = () => {
       
       {error ? <div className="error-message">Error: {error}</div> : loading ? <div className="text-center py-4">Synchronizing Telemetry...</div> : (
         <>
-          {warDetails && (
-            <div className="glow-panel p-4 mb-4" style={{ background: 'linear-gradient(45deg, rgba(220, 38, 38, 0.05), rgba(0,0,0,0))', borderLeft: '4px solid var(--hp-nerve)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                <h2 style={{ color: 'var(--hp-nerve)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="pulse-dot" style={{ backgroundColor: 'var(--hp-nerve)', boxShadow: '0 0 8px var(--hp-nerve)' }}></span>
-                  RANKED WAR
-                </h2>
-                <div style={{ fontSize: '1.2rem', fontFamily: 'monospace', color: 'var(--text-main)' }}>
-                  T-MINUS: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{countdown || 'CALCULATING...'}</span>
-                </div>
-              </div>
-              <div className="mt-3" style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                 <p style={{ color: 'var(--text-main)', fontWeight: 'bold', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                   <span style={{ color: '#ffaa00' }}>⚠️</span> RULES OF ENGAGEMENT:
-                 </p>
-                 Both sides will attack at the same time. No attacking onliners. There will be no flying except for rehabing and no turtling. We will med out if needed for them and vice versa. We will stop at 2k. If they reach 3k before we get our points they will stop so we can get them. Once we reach our 2k points they will attack till the war finishes.
-              </div>
-            </div>
-          )}
-          
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Main Content Pane */}
             <div style={{ flex: 1, minWidth: '300px', overflowX: 'auto' }}>
@@ -462,7 +450,26 @@ const FactionWarRoom = () => {
             </div>
             
             {/* Right Sidebar */}
-            <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ flex: '0 0 330px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {warDetails && (
+                <div className="glow-panel p-3" style={{ background: 'linear-gradient(45deg, rgba(220, 38, 38, 0.05), rgba(0,0,0,0))', borderLeft: '4px solid var(--hp-nerve)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <h2 style={{ color: 'var(--hp-nerve)', margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span className="pulse-dot" style={{ backgroundColor: 'var(--hp-nerve)', boxShadow: '0 0 8px var(--hp-nerve)' }}></span>
+                      RANKED WAR
+                    </h2>
+                    <div style={{ fontSize: '1rem', fontFamily: 'monospace', color: 'var(--text-main)' }}>
+                      T-MINUS: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{countdown || 'CALC...'}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                     <p style={{ color: 'var(--text-main)', fontWeight: 'bold', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                       <span style={{ color: '#ffaa00' }}>⚠️</span> ROE:
+                     </p>
+                     Both sides will attack at the same time. No attacking onliners. There will be no flying except for rehabing and no turtling. We will med out if needed for them and vice versa. We will stop at 2k. If they reach 3k before we get our points they will stop so we can get them. Once we reach our 2k points they will attack till the war finishes.
+                  </div>
+                </div>
+              )}
               {renderChainMetrics()}
               
               <div className="metric-card" style={{ margin: 0 }}>
