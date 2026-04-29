@@ -99,6 +99,12 @@ export const fetchFactionArmoryNews = async (factionId = '') => {
   return d.armorynews || {};
 };
 
+export const fetchRankedWarReport = async (warId) => {
+  if (!warId) throw new Error("Missing war ID for ranked war report");
+  // V1 Endpoint works perfectly for rankedwarreport selection
+  return await fetchFactionCore(`/torn/${warId}`, { selections: 'rankedwarreport' });
+};
+
 export const fetchFactionBalances = async (factionId = '') => {
   const fId = factionId ? `/${factionId}` : '';
   return await fetchFactionCore(`/v2/faction${fId}/balance`, { cat: 'all' });

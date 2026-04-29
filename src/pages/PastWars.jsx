@@ -1,12 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { fetchFactionPastWars, getFactionId } from '../services/api';
+import { fetchFactionPastWars, fetchRankedWarReport, getFactionId } from '../services/api';
 
 const PastWars = () => {
   const { factionName } = useDataContext();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [wars, setWars] = useState([]);
+  
+  const [expandedWarId, setExpandedWarId] = useState(null);
+  const [reportData, setReportData] = useState({});
+  const [loadingReport, setLoadingReport] = useState(false);
+  
+  const handleRowClick = async (warId) => {
+     if (expandedWarId === warId) {
+        setExpandedWarId(null);
+        return;
+     }
+     setExpandedWarId(warId);
+     
+     if (reportData[warId]) return;
+     
+     setLoadingReport(true);
+     try {
+        const report = await fetchRankedWarReport(warId);
+        setReportData(prev => ({ ...prev, [warId]: report.rankedwarreport || report }));
+     } catch (err) {
+        console.error("Failed to load report", err);
+     } finally {
+        setLoadingReport(false);
+     }
+  };
+
+  const renderWarDetails = (warId, usSummary, themSummary) => {
+     const data = reportData[warId];
+     if (loadingReport && !data) {
+        return <div className="p-3 text-center text-muted" style={{ background: 'rgba(0,0,0,0.3)' }}>Loading deep telemetry for this operation...</div>;
+     }
+     if (!data) {
+        return <div className="p-3 text-center text-muted" style={{ background: 'rgba(0,0,0,0.3)' }}>Failed to load report data.</div>;
+     }
+     
+     const factions = data.factions || {};
+     const usData = Object.values(factions).find(f => f.name === usSummary.name) || Object.values(factions)[0];
+     const themData = Object.values(factions).find(f => f.name === themSummary.name) || Object.values(factions)[1];
+     
+     const renderFactionTable = (fac, isUs) => {
+        if (!fac || !fac.members) return null;
+        const members = Object.values(fac.members).sort((a,b) => b.score - a.score);
+        return (
+           <div style={{ flex: 1, minWidth: '300px' }}>
+              <h4 style={{ color: isUs ? 'var(--accent-primary)' : 'var(--hp-nerve)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', marginBottom: '12px', fontSize: '1rem' }}>
+                 {fac.name} Roster
+              </h4>
+              <table className="data-table" style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)' }}>
+                 <thead>
+                    <tr>
+                       <th style={{ background: 'transparent' }}>Member</th>
+                       <th style={{ textAlign: 'right', background: 'transparent' }}>Score</th>
+                       <th style={{ textAlign: 'right', background: 'transparent' }}>Attacks</th>
+                       <th style={{ textAlign: 'right', background: 'transparent' }}>Respect</th>
+                    </tr>
+                 </thead>
+                 <tbody>
+                    {members.map(m => (
+                       <tr key={m.id || m.name}>
+                          <td>{m.name} <span className="text-muted">[{m.id || ''}]</span></td>
+                          <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{m.score || 0}</td>
+                          <td style={{ textAlign: 'right' }}>{m.attacks || 0}</td>
+                          <td style={{ textAlign: 'right' }}>{m.respect ? m.respect.toFixed(2) : 0}</td>
+                       </tr>
+                    ))}
+                 </tbody>
+              </table>
+           </div>
+        );
+     };
+
+     return (
+       <div className="p-3" style={{ background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+             {renderFactionTable(usData, true)}
+             {renderFactionTable(themData, false)}
+          </div>
+       </div>
+     );
+  };
   
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-primary', '#ef4444');
@@ -99,19 +178,31 @@ const PastWars = () => {
                 const timeStart = new Date(war.start * 1000).toLocaleDateString();
                 const timeEnd = war.end ? new Date(war.end * 1000).toLocaleDateString() : 'Ongoing';
 
+                const warId = war.war_id || war.id || war.start;
+                const isExpanded = expandedWarId === warId;
+
                 return (
-                  <tr key={war.war_id || war.id || war.start}>
-                    <td style={{ fontWeight: '500' }}>
-                      <span className="text-muted">{timeStart} — {timeEnd}</span>
-                    </td>
-                    <td style={{ fontWeight: 'bold' }}>{them.name} <span className="text-muted">[{them.id}]</span></td>
-                    <td style={{ fontWeight: 'bold', color: resultColor, letterSpacing: '1px' }}>{resultText}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
-                       <span style={{ color: isWin ? 'var(--accent-primary)' : 'var(--text-main)' }}>{us.score}</span>
-                       <span className="text-muted" style={{ margin: '0 8px' }}>vs</span>
-                       <span style={{ color: !isWin ? 'var(--hp-nerve)' : 'var(--text-muted)' }}>{them.score}</span>
-                    </td>
-                  </tr>
+                  <React.Fragment key={warId}>
+                    <tr onClick={() => handleRowClick(warId)} style={{ cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.05)' : 'transparent', transition: 'background-color 0.2s ease' }}>
+                      <td style={{ fontWeight: '500' }}>
+                        <span className="text-muted">{timeStart} — {timeEnd}</span>
+                      </td>
+                      <td style={{ fontWeight: 'bold' }}>{them.name} <span className="text-muted">[{them.id}]</span></td>
+                      <td style={{ fontWeight: 'bold', color: resultColor, letterSpacing: '1px' }}>{resultText}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>
+                         <span style={{ color: isWin ? 'var(--accent-primary)' : 'var(--text-main)' }}>{us.score}</span>
+                         <span className="text-muted" style={{ margin: '0 8px' }}>vs</span>
+                         <span style={{ color: !isWin ? 'var(--hp-nerve)' : 'var(--text-muted)' }}>{them.score}</span>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                       <tr>
+                         <td colSpan="4" style={{ padding: 0 }}>
+                           {renderWarDetails(warId, us, them)}
+                         </td>
+                       </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
