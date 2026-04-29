@@ -446,7 +446,9 @@ const FactionWarRoom = () => {
       <div className="roster-split-grid">
         <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
           <div style={{ padding: '16px', background: 'rgba(220, 38, 38, 0.1)', borderBottom: '2px solid var(--hp-nerve)' }}>
-            <h2 style={{color: 'var(--hp-nerve)', textAlign: 'center'}}>Active Adversaries</h2>
+            <h3 style={{ color: 'var(--hp-nerve)', margin: 0, textAlign: 'center', textTransform: 'uppercase' }}>
+              {enemyMembers.length > 0 ? enemyMembers[0].faction_name : 'Active Adversaries'}
+            </h3>
           </div>
           <table className="data-table" style={{ border: 'none' }}>
             <thead>
@@ -661,7 +663,7 @@ const FactionWarRoom = () => {
     };
 
     return (
-      <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid var(--accent-primary)', margin: 0, height: '100%' }}>
+      <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid var(--accent-primary)', margin: 0 }}>
         <h3 style={{ margin: '0 0 16px 0', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Vital Signs</h3>
         {renderBar('Life', life?.current || 0, life?.maximum || 0, '#3b82f6')}
         {renderBar('Energy', energy?.current || 0, energy?.maximum || 0, '#10b981')}
@@ -683,19 +685,6 @@ const FactionWarRoom = () => {
       
       {error ? <div className="error-message">Error: {error}</div> : loading ? <div className="text-center py-4">Synchronizing Telemetry...</div> : (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }}>
-            {renderVitals()}
-            <div className="glow-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', borderTop: '3px solid var(--border-color)', margin: 0 }}>
-              [Module 2 Placeholder]
-            </div>
-            <div className="glow-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', borderTop: '3px solid var(--border-color)', margin: 0 }}>
-              [Module 3 Placeholder]
-            </div>
-            <div className="glow-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', borderTop: '3px solid var(--border-color)', margin: 0 }}>
-              [Module 4 Placeholder]
-            </div>
-          </div>
-
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Main Content Pane */}
             <div style={{ flex: 1, minWidth: '300px', overflowX: 'auto' }}>
@@ -706,6 +695,7 @@ const FactionWarRoom = () => {
             
             {/* Right Sidebar */}
             <div style={{ flex: '0 0 330px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {renderVitals()}
               {warDetails && (
                 <div className="glow-panel p-3" style={{ background: 'linear-gradient(45deg, rgba(220, 38, 38, 0.05), rgba(0,0,0,0))', borderLeft: '4px solid var(--hp-nerve)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
