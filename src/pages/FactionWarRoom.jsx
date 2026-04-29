@@ -692,7 +692,6 @@ const FactionWarRoom = () => {
                  cursor: autoRefresh ? 'pointer' : 'not-allowed'
                }}
             >
-               <option value={10000}>10s</option>
                <option value={30000}>30s</option>
                <option value={60000}>1m</option>
                <option value={120000}>2m</option>
