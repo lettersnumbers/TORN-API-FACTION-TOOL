@@ -59,18 +59,21 @@ const PastWars = () => {
                        <th style={{ background: 'transparent' }}>Member</th>
                        <th style={{ textAlign: 'right', background: 'transparent' }}>Score</th>
                        <th style={{ textAlign: 'right', background: 'transparent' }}>Attacks</th>
-                       <th style={{ textAlign: 'right', background: 'transparent' }}>Respect</th>
+                       <th style={{ textAlign: 'right', background: 'transparent' }}>Score %</th>
                     </tr>
                  </thead>
                  <tbody>
-                    {members.map(m => (
-                       <tr key={m.id || m.name}>
-                          <td>{m.name} <span className="text-muted">[{m.id || ''}]</span></td>
-                          <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{m.score || 0}</td>
-                          <td style={{ textAlign: 'right' }}>{m.attacks || 0}</td>
-                          <td style={{ textAlign: 'right' }}>{m.respect ? m.respect.toFixed(2) : 0}</td>
-                       </tr>
-                    ))}
+                    {members.map(m => {
+                       const scorePct = fac.score && fac.score > 0 ? ((m.score || 0) / fac.score * 100) : 0;
+                       return (
+                         <tr key={m.id || m.name}>
+                            <td>{m.name} <span className="text-muted">[{m.id || ''}]</span></td>
+                            <td style={{ textAlign: 'right', fontWeight: 'bold' }}>{m.score || 0}</td>
+                            <td style={{ textAlign: 'right' }}>{m.attacks || 0}</td>
+                            <td style={{ textAlign: 'right', color: 'var(--accent-primary)' }}>{scorePct.toFixed(1)}%</td>
+                         </tr>
+                       );
+                    })}
                  </tbody>
               </table>
            </div>
