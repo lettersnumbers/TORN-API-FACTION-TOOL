@@ -52,6 +52,7 @@ const FactionWarRoom = () => {
   const [userAttacks, setUserAttacks] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
   const [enemyFactionIds, setEnemyFactionIds] = useState([]);
+  const [userVitals, setUserVitals] = useState(null);
 
   useEffect(() => {
     const styleEl = document.createElement('style');
@@ -167,6 +168,18 @@ const FactionWarRoom = () => {
               if (active && myAttacksRes.attacks) setUserAttacks(myAttacksRes.attacks);
            } catch(e) {}
         }
+
+        if (active) {
+           try {
+              const vitalsRes = await fetchUserSpecific('bars');
+              if (vitalsRes) {
+                 const b = vitalsRes.bars || vitalsRes;
+                 if (b && b.life) {
+                    setUserVitals({ life: b.life, energy: b.energy, nerve: b.nerve, happy: b.happy });
+                 }
+              }
+           } catch(e) {}
+        }
       } catch (err) {
         if (active) setError(err.message);
       } finally {
@@ -193,6 +206,14 @@ const FactionWarRoom = () => {
              }
           });
           if (enemies.length > 0) setEnemyMembers(enemies);
+          
+          const vitalsRes = await fetchUserSpecific('bars').catch(() => null);
+          if (vitalsRes) {
+             const b = vitalsRes.bars || vitalsRes;
+             if (b && b.life) {
+                setUserVitals({ life: b.life, energy: b.energy, nerve: b.nerve, happy: b.happy });
+             }
+          }
        } catch (err) {
           console.error("Error polling enemy status", err);
        }
@@ -612,6 +633,44 @@ const FactionWarRoom = () => {
     );
   };
 
+  const renderVitals = () => {
+    if (!userVitals) {
+       return (
+         <div className="glow-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '3px solid var(--accent-primary)', margin: 0 }}>
+           <h3 style={{ margin: '0 0 8px 0', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Vital Signs</h3>
+           <div className="text-muted">Loading vitals...</div>
+         </div>
+       );
+    }
+
+    const { life, energy, nerve, happy } = userVitals;
+    
+    const renderBar = (label, current, max, color) => {
+       const pct = max > 0 ? Math.min(100, Math.max(0, (current / max) * 100)) : 0;
+       return (
+         <div style={{ marginBottom: '12px' }}>
+           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '4px' }}>
+             <span style={{ color: '#fff' }}>{label}</span>
+             <span className="text-muted">{current} / {max}</span>
+           </div>
+           <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+             <div style={{ width: `${pct}%`, height: '100%', backgroundColor: color, boxShadow: `0 0 8px ${color}`, transition: 'width 0.5s ease-out' }}></div>
+           </div>
+         </div>
+       );
+    };
+
+    return (
+      <div className="glow-panel" style={{ padding: '16px', borderTop: '3px solid var(--accent-primary)', margin: 0, height: '100%' }}>
+        <h3 style={{ margin: '0 0 16px 0', color: 'var(--accent-primary)', fontSize: '1.1rem' }}>Vital Signs</h3>
+        {renderBar('Life', life?.current || 0, life?.maximum || 0, '#3b82f6')}
+        {renderBar('Energy', energy?.current || 0, energy?.maximum || 0, '#10b981')}
+        {renderBar('Nerve', nerve?.current || 0, nerve?.maximum || 0, '#ef4444')}
+        {renderBar('Happy', happy?.current || 0, happy?.maximum || 0, '#f59e0b')}
+      </div>
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header d-flex-between">
@@ -624,6 +683,19 @@ const FactionWarRoom = () => {
       
       {error ? <div className="error-message">Error: {error}</div> : loading ? <div className="text-center py-4">Synchronizing Telemetry...</div> : (
         <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '20px' }}>
+            {renderVitals()}
+            <div className="glow-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', borderTop: '3px solid var(--border-color)', margin: 0 }}>
+              [Module 2 Placeholder]
+            </div>
+            <div className="glow-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', borderTop: '3px solid var(--border-color)', margin: 0 }}>
+              [Module 3 Placeholder]
+            </div>
+            <div className="glow-panel" style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', borderTop: '3px solid var(--border-color)', margin: 0 }}>
+              [Module 4 Placeholder]
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Main Content Pane */}
             <div style={{ flex: 1, minWidth: '300px', overflowX: 'auto' }}>
