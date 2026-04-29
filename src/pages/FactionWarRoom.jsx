@@ -540,38 +540,47 @@ const FactionWarRoom = () => {
   const renderChainMetrics = () => {
      if (!data || !data.chain) return null;
      const currentChain = data.chain.current || 0;
+     if (currentChain === 0) return null;
+
      const milestones = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
      const nextBonus = milestones.find(m => m > currentChain) || 'Maxed';
      const hitsRemaining = typeof nextBonus === 'number' ? nextBonus - currentChain : 0;
      
      const timeout = data.chain.timeout || 0;
-     const isCritical = timeout > 0 && timeout < 120; // Under 2 mins (Slow Chaining window)
+     const isCritical = timeout > 0 && timeout < 120; // Under 2 mins
      const isApproaching = hitsRemaining > 0 && hitsRemaining <= 10;
      
      return (
-       <div className="metric-card" style={{ borderColor: currentChain > 0 ? 'var(--hp-nerve)' : 'var(--border-color)' }}>
-         <h3 style={{ color: currentChain > 0 ? 'var(--hp-nerve)' : 'inherit' }}>Active Chain</h3>
-         <div className="metric-value">{currentChain}</div>
+       <div className="glow-panel" style={{ 
+         padding: '10px 20px', 
+         display: 'flex', 
+         alignItems: 'center', 
+         gap: '24px', 
+         borderColor: 'var(--hp-nerve)',
+         margin: 0,
+         borderTop: '3px solid var(--hp-nerve)'
+       }}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ color: 'var(--hp-nerve)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Chain</span>
+            <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>{currentChain}</span>
+         </div>
          
-         {currentChain > 0 && (
-           <>
-             <div className="mt-2" style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                Next Bonus: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{nextBonus}</span>
-             </div>
-             {isApproaching && (
-                <div style={{ color: '#ffaa00', fontWeight: 'bold', fontSize: '0.8rem', marginTop: '4px' }}>
-                  ⚠️ BONUS APPROACHING (Hold for Mux/Warlord)
-                </div>
-             )}
-           </>
-         )}
-         
-         {timeout > 0 && (
-           <div className={`mt-2 ${isCritical ? 'text-danger' : 'text-muted'}`} style={{ fontWeight: isCritical ? 'bold' : 'normal' }}>
-             {isCritical && <span style={{ marginRight: '4px' }}>⚠️ PUSH: </span>}
-             Timer: {timeout}s
-           </div>
-         )}
+         <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '24px' }}>
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'baseline' }}>
+               <span style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
+                  Next Bonus: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{nextBonus}</span>
+               </span>
+               <span className={`${isCritical ? 'text-danger' : 'text-muted'}`} style={{ fontWeight: isCritical ? 'bold' : 'normal', fontSize: '0.9rem' }}>
+                  {isCritical && <span style={{ marginRight: '4px' }}>⚠️ PUSH: </span>}
+                  Timer: {timeout}s
+               </span>
+            </div>
+            {isApproaching && (
+               <div style={{ color: '#ffaa00', fontWeight: 'bold', fontSize: '0.75rem', marginTop: '2px' }}>
+                 ⚠️ BONUS APPROACHING (Hold for Mux/Warlord)
+               </div>
+            )}
+         </div>
        </div>
      );
   };
@@ -637,10 +646,13 @@ const FactionWarRoom = () => {
 
   return (
     <div className="page-container">
-      <div className="page-header d-flex-between">
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
         <div>
           <h1>War Room :: <span className="accent-text">{factionName}</span></h1>
-          <p>Active conflicts, chain status, and recent combat operations.</p>
+          <p style={{ margin: 0 }}>Active conflicts, chain status, and recent combat operations.</p>
+        </div>
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          {renderChainMetrics()}
         </div>
         <button className="action-button small" onClick={() => window.location.reload()}>Refresh Feed</button>
       </div>
@@ -676,7 +688,6 @@ const FactionWarRoom = () => {
                   </div>
                 </div>
               )}
-              {renderChainMetrics()}
               
               <div className="metric-card" style={{ margin: 0 }}>
                 <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
