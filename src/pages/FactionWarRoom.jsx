@@ -278,7 +278,17 @@ const FactionWarRoom = () => {
     );
     
     const ourFid = data.id || parseInt(getFactionId());
-    const attacksArray = Object.values(data.attacks).sort((a, b) => b.timestamp_ended - a.timestamp_ended);
+    const enemyIds = new Set(enemyMembers.map(m => m.id));
+    
+    const attacksArray = Object.values(data.attacks).filter(att => {
+      const attId = att.attacker?.id || att.attacker_id;
+      const defId = att.defender?.id || att.defender_id;
+      return enemyIds.has(attId) || enemyIds.has(defId);
+    }).sort((a, b) => {
+      const tA = a.ended || a.started || a.timestamp_ended || a.timestamp_started || 0;
+      const tB = b.ended || b.started || b.timestamp_ended || b.timestamp_started || 0;
+      return tB - tA;
+    });
     
     return (
       <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
@@ -290,10 +300,18 @@ const FactionWarRoom = () => {
             <div className="text-center text-muted mt-4">No recent attacks recorded.</div>
           ) : (
             attacksArray.slice(0, 100).map(att => {
-              const isWeAttacked = att.attacker_faction === ourFid;
+              const attackerId = att.attacker?.id || att.attacker_id || 0;
+              let attackerName = att.attacker?.name || att.attacker_name || 'Someone';
+              const defenderId = att.defender?.id || att.defender_id || 0;
+              let defenderName = att.defender?.name || att.defender_name || 'Someone';
               
-              const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special'].includes(att.result);
-              const defenderWon = ['Defended'].includes(att.result);
+              const isWeAttacked = (att.attacker_faction === ourFid) || (att.attacker_faction_id === ourFid);
+              
+              if ((attackerName === 'Someone' || !attackerName) && attackerId > 0 && data.members?.[attackerId]) attackerName = data.members[attackerId].name;
+              if ((defenderName === 'Someone' || !defenderName) && defenderId > 0 && data.members?.[defenderId]) defenderName = data.members[defenderId].name;
+
+              const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result);
+              const defenderWon = ['Defended', 'Stalemate'].includes(att.result);
               
               let isWin = false;
               let isLoss = false;
@@ -306,23 +324,24 @@ const FactionWarRoom = () => {
               }
               
               const color = isWin ? '#10b981' : isLoss ? '#ef4444' : 'var(--text-muted)';
-              const respectGain = att.respect_gain || 0;
+              const respectGain = parseFloat(att.respect || att.respect_gain || 0);
               const respectStr = (isWin || respectGain > 0) ? `+${respectGain.toFixed(2)}` : respectGain.toFixed(2);
+              const timeNum = att.ended || att.started || att.timestamp_ended || att.timestamp_started;
               
               return (
-                <div key={att.code || att.timestamp_ended + att.attacker_id} style={{ 
+                <div key={att.id || att.code || (timeNum + '-' + attackerId)} style={{ 
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
                   padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
                   backgroundColor: isWin ? 'rgba(16, 185, 129, 0.05)' : isLoss ? 'rgba(239, 68, 68, 0.05)' : 'transparent'
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <div style={{ fontSize: '0.95rem' }}>
-                       <span style={{ fontWeight: isWeAttacked ? 'bold' : 'normal', color: isWeAttacked ? '#fff' : 'inherit' }}>{att.attacker_name}</span>
+                       <span style={{ fontWeight: isWeAttacked ? 'bold' : 'normal', color: isWeAttacked ? '#fff' : 'inherit' }}>{attackerName}</span>
                        <span className="text-muted" style={{ margin: '0 8px' }}>vs</span>
-                       <span style={{ fontWeight: !isWeAttacked ? 'bold' : 'normal', color: !isWeAttacked ? '#fff' : 'inherit' }}>{att.defender_name}</span>
+                       <span style={{ fontWeight: !isWeAttacked ? 'bold' : 'normal', color: !isWeAttacked ? '#fff' : 'inherit' }}>{defenderName}</span>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {new Date(att.timestamp_ended * 1000).toLocaleTimeString()} - {att.result} {att.stealth ? '(Stealthed)' : ''}
+                      {timeNum ? new Date(timeNum * 1000).toLocaleTimeString() : 'Unknown'} - {att.result} {att.stealth ? '(Stealthed)' : ''}
                     </div>
                   </div>
                   <div style={{ color, fontWeight: 'bold', fontSize: '1.15rem', textAlign: 'right' }}>
@@ -352,17 +371,19 @@ const FactionWarRoom = () => {
               <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
                 <th>Operative</th>
                 <th>Level</th>
+                <th>Score</th>
                 <th>Status</th>
                 <th>Intel</th>
               </tr>
             </thead>
             <tbody>
               {enemyMembers.length === 0 && (
-                <tr><td colSpan="4" className="text-center text-muted">No Enemies Detected.</td></tr>
+                <tr><td colSpan="5" className="text-center text-muted">No Enemies Detected.</td></tr>
               )}
               {enemyMembers.sort((a,b) => b.level - a.level).map(m => {
                 const analysis = targetAnalysis[m.id];
                 const loading = analysisLoading[m.id];
+                const warScore = warDetails?.factions?.[m.faction_id]?.members?.[m.id]?.score || 0;
                 
                 let bgStyle = 'transparent';
                 if (analysis && analysis.loaded) {
@@ -387,6 +408,7 @@ const FactionWarRoom = () => {
                       </div>
                     </td>
                     <td>{m.level}</td>
+                    <td style={{ fontWeight: 'bold', color: warScore > 0 ? 'var(--accent-primary)' : 'inherit' }}>{warScore}</td>
                     <td><StatusCell status={m.status} /></td>
                     <td>
                       {loading ? <span className="text-muted">Scanning...</span> : analysis ? (
