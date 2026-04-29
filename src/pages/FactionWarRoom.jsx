@@ -157,16 +157,20 @@ const FactionWarRoom = () => {
       const now = Math.floor(Date.now() / 1000);
       const diff = warDetails.start - now;
       if (diff > 0) {
-         const h = Math.floor(diff / 3600);
+         const d = Math.floor(diff / 86400);
+         const h = Math.floor((diff % 86400) / 3600);
          const m = Math.floor((diff % 3600) / 60);
          const s = diff % 60;
-         setCountdown(`STARTS IN: ${h}h ${m}m ${s}s`);
+         const pad = n => n.toString().padStart(2, '0');
+         setCountdown(`STARTS IN: ${pad(d)}:${pad(h)}:${pad(m)}:${pad(s)}`);
       } else {
          const duration = now - warDetails.start;
-         const h = Math.floor(duration / 3600);
+         const d = Math.floor(duration / 86400);
+         const h = Math.floor((duration % 86400) / 3600);
          const m = Math.floor((duration % 3600) / 60);
          const s = duration % 60;
-         setCountdown(`ACTIVE: ${h}h ${m}m ${s}s`);
+         const pad = n => n.toString().padStart(2, '0');
+         setCountdown(`DURATION: ${pad(d)}:${pad(h)}:${pad(m)}:${pad(s)}`);
       }
     }, 1000);
     return () => clearInterval(interval);
@@ -319,10 +323,12 @@ const FactionWarRoom = () => {
                 <tr><td colSpan="6" className="text-center text-muted">No Enemies Detected.</td></tr>
               )}
               {enemyMembers.sort((a,b) => b.level - a.level).map(m => {
-                const warScore = warDetails?.factions?.[m.faction_id]?.members?.[m.id]?.score || 0;
+                const apiScore = warDetails?.factions?.[m.faction_id]?.members?.[m.id]?.score || 0;
                 
                 let wins = 0;
                 let losses = 0;
+                let calculatedScore = 0;
+                
                 if (data && data.attacks) {
                    const myId = parseInt(userId);
                    const enemyId = parseInt(m.id);
@@ -335,7 +341,12 @@ const FactionWarRoom = () => {
                       const defId = parseInt(att.defender?.id || att.defender_id || 0);
                       
                       const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
-                      const defenderWon = ['Lost', 'Defended'].includes(att.result);
+                      const defenderWon = ['Lost', 'Defended', 'Stalemate'].includes(att.result);
+                      
+                      const respectGain = parseFloat(att.respect || att.respect_gain || 0);
+                      
+                      if (attId === enemyId && attackerWon) calculatedScore += respectGain;
+                      if (defId === enemyId && defenderWon) calculatedScore += respectGain;
                       
                       if (attId === myId && defId === enemyId) {
                          if (attackerWon) wins++;
@@ -346,6 +357,8 @@ const FactionWarRoom = () => {
                       }
                    });
                 }
+                
+                const warScore = calculatedScore > 0 ? calculatedScore : apiScore;
                 
                 return (
                   <tr key={m.id}>
