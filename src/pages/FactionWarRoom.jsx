@@ -53,6 +53,19 @@ const FactionWarRoom = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
   const [enemyFactionIds, setEnemyFactionIds] = useState([]);
   const [userVitals, setUserVitals] = useState(null);
+  
+  // Auto-refresh state
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(60000);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const intId = setInterval(() => {
+       setRefreshTrigger(prev => prev + 1);
+    }, refreshInterval);
+    return () => clearInterval(intId);
+  }, [autoRefresh, refreshInterval]);
 
   useEffect(() => {
     const styleEl = document.createElement('style');
@@ -82,7 +95,7 @@ const FactionWarRoom = () => {
   useEffect(() => {
     let active = true;
     const loadInfo = async () => {
-      setLoading(true);
+      if (refreshTrigger === 0) setLoading(true);
       try {
         const res = await fetchFactionWarData();
         const warsRes = await fetchFactionActiveWars().catch(() => ({ wars: { ranked: null, raids: null, territory: null } }));
@@ -183,12 +196,12 @@ const FactionWarRoom = () => {
       } catch (err) {
         if (active) setError(err.message);
       } finally {
-        if (active) setLoading(false);
+        if (active && refreshTrigger === 0) setLoading(false);
       }
     };
     loadInfo();
     return () => { active = false; };
-  }, [factionName]);
+  }, [factionName, refreshTrigger]);
 
   useEffect(() => {
     if (enemyFactionIds.length === 0) return;
@@ -654,7 +667,39 @@ const FactionWarRoom = () => {
         <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           {renderChainMetrics()}
         </div>
-        <button className="action-button small" onClick={() => window.location.reload()}>Refresh Feed</button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+          <button className="action-button small" onClick={() => setRefreshTrigger(prev => prev + 1)}>Refresh Feed</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <input 
+               type="checkbox" 
+               id="autoRefresh" 
+               checked={autoRefresh} 
+               onChange={(e) => setAutoRefresh(e.target.checked)} 
+               style={{ accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
+            />
+            <label htmlFor="autoRefresh" style={{ cursor: 'pointer', margin: 0 }}>Auto-Refresh</label>
+            <select 
+               value={refreshInterval} 
+               onChange={(e) => setRefreshInterval(Number(e.target.value))}
+               disabled={!autoRefresh}
+               style={{ 
+                 background: 'rgba(0,0,0,0.5)', 
+                 color: '#fff', 
+                 border: '1px solid var(--border-color)', 
+                 borderRadius: '3px',
+                 fontSize: '0.75rem',
+                 padding: '2px 4px',
+                 cursor: autoRefresh ? 'pointer' : 'not-allowed'
+               }}
+            >
+               <option value={10000}>10s</option>
+               <option value={30000}>30s</option>
+               <option value={60000}>1m</option>
+               <option value={120000}>2m</option>
+               <option value={300000}>5m</option>
+            </select>
+          </div>
+        </div>
       </div>
       
       {error ? <div className="error-message">Error: {error}</div> : loading ? <div className="text-center py-4">Synchronizing Telemetry...</div> : (
