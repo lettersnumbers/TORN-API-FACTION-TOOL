@@ -320,13 +320,15 @@ const FactionWarRoom = () => {
                 let wins = 0;
                 let losses = 0;
                 if (data && data.attacks) {
+                   const myId = parseInt(userId);
+                   const enemyId = parseInt(m.id);
                    Object.values(data.attacks).forEach(att => {
-                      const attId = att.attacker?.id || att.attacker_id || 0;
-                      const defId = att.defender?.id || att.defender_id || 0;
-                      if (attId === userId && defId === m.id) {
+                      const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
+                      const defId = parseInt(att.defender?.id || att.defender_id || 0);
+                      if (attId === myId && defId === enemyId) {
                          if (['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result)) wins++;
                          else losses++;
-                      } else if (attId === m.id && defId === userId) {
+                      } else if (attId === enemyId && defId === myId) {
                          if (['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested'].includes(att.result)) losses++;
                          else wins++;
                       }
