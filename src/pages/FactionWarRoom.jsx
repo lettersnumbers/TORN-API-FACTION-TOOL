@@ -374,11 +374,12 @@ const FactionWarRoom = () => {
                 <th>Score</th>
                 <th>Status</th>
                 <th>Intel</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {enemyMembers.length === 0 && (
-                <tr><td colSpan="5" className="text-center text-muted">No Enemies Detected.</td></tr>
+                <tr><td colSpan="6" className="text-center text-muted">No Enemies Detected.</td></tr>
               )}
               {enemyMembers.sort((a,b) => b.level - a.level).map(m => {
                 const analysis = targetAnalysis[m.id];
@@ -422,6 +423,17 @@ const FactionWarRoom = () => {
                       ) : (
                         <button className="action-button small" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => handleAnalyze(m.id, m.level)}>Scan</button>
                       )}
+                    </td>
+                    <td>
+                      <a 
+                        href={`https://www.torn.com/page.php?sid=attack&user2ID=${m.id}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="action-button small" 
+                        style={{ padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', backgroundColor: 'var(--hp-nerve)', color: '#fff', border: 'none', display: 'inline-block' }}
+                      >
+                        Attack
+                      </a>
                     </td>
                   </tr>
                 );
