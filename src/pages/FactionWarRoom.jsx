@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { fetchFactionWarData, fetchEnemyRoster, fetchUserData, fetchUserSpecific, fetchAnyUserSpecific, fetchFactionActiveWars, getFactionId } from '../services/api';
 
-const StatusCell = ({ status }) => {
+const StatusCell = ({ status, lastAction }) => {
   const stateStr = status?.details || status?.state || 'Okay';
   const isBad = status?.state === 'Hospital';
+  const isOffline = lastAction?.status === 'Offline' && lastAction?.relative;
   return (
     <div style={{ color: isBad ? 'var(--hp-nerve)' : 'inherit', display: 'flex', flexDirection: 'column' }}>
       <span>{stateStr}</span>
+      {isOffline && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{lastAction.relative}</span>}
     </div>
   );
 };
@@ -49,6 +51,7 @@ const FactionWarRoom = () => {
   const [countdown, setCountdown] = useState('');
   const [userAttacks, setUserAttacks] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
+  const [enemyFactionIds, setEnemyFactionIds] = useState([]);
 
   useEffect(() => {
     const styleEl = document.createElement('style');
@@ -138,7 +141,9 @@ const FactionWarRoom = () => {
         }
 
         if (enemyFactions.size > 0) {
-          const rosters = await Promise.all(Array.from(enemyFactions).map(id => fetchEnemyRoster(id).catch(() => null)));
+          const eFactionsArr = Array.from(enemyFactions);
+          setEnemyFactionIds(eFactionsArr);
+          const rosters = await Promise.all(eFactionsArr.map(id => fetchEnemyRoster(id).catch(() => null)));
           rosters.forEach(r => {
              // Basic cross-check: avoid adding our own faction to the "enemies" list
              if (r && r.members && r.faction && r.faction.id !== ourFid) {
@@ -171,6 +176,30 @@ const FactionWarRoom = () => {
     loadInfo();
     return () => { active = false; };
   }, [factionName]);
+
+  useEffect(() => {
+    if (enemyFactionIds.length === 0) return;
+    
+    const interval = setInterval(async () => {
+       try {
+          const ourFid = data?.id || parseInt(getFactionId());
+          const rosters = await Promise.all(enemyFactionIds.map(id => fetchEnemyRoster(id).catch(() => null)));
+          let enemies = [];
+          rosters.forEach(r => {
+             if (r && r.members && r.faction && r.faction.id !== ourFid) {
+                Object.values(r.members).forEach(m => {
+                   enemies.push({ ...m, faction_name: r.faction.name, faction_id: r.faction.id });
+                });
+             }
+          });
+          if (enemies.length > 0) setEnemyMembers(enemies);
+       } catch (err) {
+          console.error("Error polling enemy status", err);
+       }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [enemyFactionIds, data]);
 
   useEffect(() => {
     if (!warDetails || !warDetails.start) return;
@@ -401,12 +430,12 @@ const FactionWarRoom = () => {
           <table className="data-table" style={{ border: 'none' }}>
             <thead>
               <tr style={{ background: 'rgba(0,0,0,0.3)' }}>
-                <th style={{ width: '40px' }}>O</th>
+                <th style={{ width: '40px' }}>Online?</th>
                 <th>Operative</th>
                 <th onClick={() => requestSort('level')} style={{ cursor: 'pointer' }}>Level {sortConfig.key === 'level' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => requestSort('score')} style={{ cursor: 'pointer' }}>Score {sortConfig.key === 'score' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th>Status</th>
-                <th onClick={() => requestSort('countdown')} style={{ cursor: 'pointer' }}>Time {sortConfig.key === 'countdown' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                <th onClick={() => requestSort('countdown')} style={{ cursor: 'pointer' }}>Til Release {sortConfig.key === 'countdown' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th>History</th>
                 <th>Action</th>
               </tr>
@@ -448,7 +477,7 @@ const FactionWarRoom = () => {
                     <td style={{ fontWeight: 'bold', color: m.warScore > 0 && !isOkay ? 'var(--accent-primary)' : 'inherit' }}>
                       {typeof m.warScore === 'number' && !Number.isInteger(m.warScore) ? m.warScore.toFixed(2) : m.warScore}
                     </td>
-                    <td><StatusCell status={m.status} /></td>
+                    <td><StatusCell status={m.status} lastAction={m.last_action} /></td>
                     <td><TimeCell status={m.status} /></td>
                     <td>
                       <div style={{ fontSize: '0.85rem', lineHeight: '1.2' }}>

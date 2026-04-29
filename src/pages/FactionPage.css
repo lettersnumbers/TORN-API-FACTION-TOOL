@@ -181,7 +181,7 @@
 }
 
 .data-table th, .data-table td {
-  padding: 16px 24px;
+  padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   white-space: nowrap;
