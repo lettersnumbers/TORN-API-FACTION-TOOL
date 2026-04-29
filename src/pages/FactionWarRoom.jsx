@@ -2,6 +2,39 @@ import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
 import { fetchFactionWarData, fetchEnemyRoster, fetchUserData, fetchUserSpecific, fetchAnyUserSpecific, fetchFactionActiveWars, getFactionId } from '../services/api';
 
+const StatusCell = ({ status }) => {
+  const [timeLeft, setTimeLeft] = useState('');
+
+  useEffect(() => {
+    if (!status?.until) return;
+    const updateTimer = () => {
+      const now = Math.floor(Date.now() / 1000);
+      const diff = status.until - now;
+      if (diff <= 0) setTimeLeft('');
+      else {
+        const h = Math.floor(diff / 3600);
+        const m = Math.floor((diff % 3600) / 60);
+        const s = diff % 60;
+        if (h > 0) setTimeLeft(`(${h}h ${m}m)`);
+        else setTimeLeft(`(${m}m ${s}s)`);
+      }
+    };
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [status]);
+
+  const stateStr = status?.details || status?.state || 'Okay';
+  const isBad = status?.state === 'Hospital';
+  
+  return (
+    <div style={{ color: isBad ? 'var(--hp-nerve)' : 'inherit', display: 'flex', flexDirection: 'column' }}>
+      <span>{stateStr}</span>
+      {timeLeft && <span style={{ fontWeight: 'bold', fontSize: '0.85rem' }}>{timeLeft}</span>}
+    </div>
+  );
+};
+
 const FactionWarRoom = () => {
   const { factionName } = useDataContext();
   const [data, setData] = useState(null);
@@ -238,7 +271,7 @@ const FactionWarRoom = () => {
     const ourMembers = data.members ? Object.values(data.members) : [];
     
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px', backgroundColor: 'var(--border-color)' }}>
+      <div className="roster-split-grid">
         {/* Left Column: Enemy Faction */}
         <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
           <div style={{ padding: '16px', background: 'rgba(220, 38, 38, 0.1)', borderBottom: '2px solid var(--hp-nerve)' }}>
@@ -271,7 +304,7 @@ const FactionWarRoom = () => {
                   <tr key={m.id} style={{ backgroundColor: bgStyle }}>
                     <td style={{ fontWeight: 'bold' }}>{m.name} <span className="text-muted">[{m.id}]</span></td>
                     <td>{m.level}</td>
-                    <td style={{ color: m.status?.state === 'Hospital' ? 'var(--hp-nerve)' : 'inherit' }}>{m.status?.details || m.status?.state || 'Okay'}</td>
+                    <td><StatusCell status={m.status} /></td>
                     <td>
                       {loading ? <span className="text-muted">Scanning...</span> : analysis ? (
                         <div style={{ fontSize: '0.8rem' }}>
@@ -282,7 +315,7 @@ const FactionWarRoom = () => {
                           {analysis.error && <span className="text-muted">{analysis.error}</span>}
                         </div>
                       ) : (
-                        <button className="action-button small" onClick={() => handleAnalyze(m.id, m.level)}>Analyze Target</button>
+                        <button className="action-button small" style={{ padding: '6px 12px', fontSize: '0.75rem' }} onClick={() => handleAnalyze(m.id, m.level)}>Scan</button>
                       )}
                     </td>
                   </tr>
@@ -313,7 +346,7 @@ const FactionWarRoom = () => {
                 <tr key={m.id}>
                   <td style={{ fontWeight: 'bold' }}>{m.name} <span className="text-muted">[{m.id}]</span></td>
                   <td>{m.level}</td>
-                  <td style={{ color: m.status?.state === 'Hospital' ? 'var(--hp-nerve)' : 'inherit' }}>{m.status?.details || m.status?.state || 'Okay'}</td>
+                  <td><StatusCell status={m.status} /></td>
                 </tr>
               ))}
             </tbody>
@@ -397,7 +430,7 @@ const FactionWarRoom = () => {
           
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Main Content Pane */}
-            <div style={{ flex: '1 1 65%', minWidth: '400px' }}>
+            <div style={{ flex: '1 1 100%', maxWidth: '100%', minWidth: '300px' }}>
               <div className="data-table-container glow-panel overflow-hidden">
                 {renderSplitRoster()}
               </div>

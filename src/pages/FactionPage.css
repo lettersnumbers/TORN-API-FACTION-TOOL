@@ -304,6 +304,19 @@
   border: 1px solid rgba(14, 165, 233, 0.2);
 }
 
+.roster-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background-color: var(--border-color);
+}
+
+@media (max-width: 1100px) {
+  .roster-split-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .d-flex-between {
     flex-direction: column;
@@ -313,5 +326,9 @@
   
   .page-header h1 {
     font-size: 1.5rem;
+  }
+  
+  .roster-split-grid {
+    grid-template-columns: 1fr;
   }
 }
