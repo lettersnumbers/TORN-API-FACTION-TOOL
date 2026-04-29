@@ -455,7 +455,7 @@ const FactionWarRoom = () => {
           
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* Main Content Pane */}
-            <div style={{ flex: '1 1 100%', maxWidth: '100%', minWidth: '300px' }}>
+            <div style={{ flex: 1, minWidth: '300px', overflowX: 'auto' }}>
               <div className="data-table-container glow-panel overflow-hidden">
                 {renderSplitRoster()}
               </div>
