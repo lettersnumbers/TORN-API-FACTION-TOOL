@@ -22,8 +22,8 @@ export default async function handler(req, res) {
 
   // Security layer: Hard-block maliciously crafted requests from pinging non-faction objects. 
   // Standard members shouldn't be proxying user endpoints or company data through the leader key.
-  if (!endpoint.startsWith('/v2/faction') && !endpoint.startsWith('/faction')) {
-    return res.status(403).json({ error: "Forbidden Axis: Proxy architecture strictly restricted to /faction endpoints." });
+  if (!endpoint.startsWith('/v2/faction') && !endpoint.startsWith('/faction') && !endpoint.startsWith('/torn')) {
+    return res.status(403).json({ error: "Forbidden Axis: Proxy architecture strictly restricted to /faction and /torn endpoints." });
   }
 
   // Extract the Faction Leader's key directly from Vercel's backend matrix.
