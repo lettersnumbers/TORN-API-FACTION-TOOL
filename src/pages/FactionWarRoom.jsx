@@ -45,6 +45,7 @@ const FactionWarRoom = () => {
   const [error, setError] = useState(null);
   const [warDetails, setWarDetails] = useState(null);
   const [countdown, setCountdown] = useState('');
+  const [userAttacks, setUserAttacks] = useState({});
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-primary', '#ef4444');
@@ -140,6 +141,13 @@ const FactionWarRoom = () => {
           setUserId(parseInt(userRes.player_id || userRes.id) || 0);
           setEnemyMembers(enemies);
         }
+        
+        if (activeWarDetails?.start) {
+           try {
+              const myAttacksRes = await fetchUserSpecific('attacks', `&from=${activeWarDetails.start}&limit=1000`);
+              if (active && myAttacksRes.attacks) setUserAttacks(myAttacksRes.attacks);
+           } catch(e) {}
+        }
       } catch (err) {
         if (active) setError(err.message);
       } finally {
@@ -212,7 +220,7 @@ const FactionWarRoom = () => {
     if (!data || !data.attacks) return (
       <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
         <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderBottom: '2px solid #f59e0b' }}>
-          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent Combat Operations</h2>
+          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent War Attacks</h2>
         </div>
         <div className="text-center text-muted mt-4">No attack data available.</div>
       </div>
@@ -234,7 +242,7 @@ const FactionWarRoom = () => {
     return (
       <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderBottom: '2px solid #f59e0b' }}>
-          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent Combat Operations</h2>
+          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent War Attacks</h2>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', maxHeight: '750px' }}>
           {attacksArray.length === 0 ? (
@@ -329,10 +337,34 @@ const FactionWarRoom = () => {
                 let losses = 0;
                 let calculatedScore = 0;
                 
-                if (data && data.attacks) {
+                const enemyId = parseInt(m.id);
+                const warStart = warDetails?.start || 0;
+
+                // Calculate personal history using userAttacks
+                if (userAttacks && Object.keys(userAttacks).length > 0) {
                    const myId = parseInt(userId);
-                   const enemyId = parseInt(m.id);
-                   const warStart = warDetails?.start || 0;
+                   Object.values(userAttacks).forEach(att => {
+                      const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
+                      if (warStart > 0 && attTime < warStart) return;
+                      
+                      const attId = parseInt(att.attacker?.id || att.attacker_id || 0);
+                      const defId = parseInt(att.defender?.id || att.defender_id || 0);
+                      
+                      const attackerWon = ['Hospitalized', 'Mugged', 'Looted', 'Special', 'Arrested', 'Attacked'].includes(att.result);
+                      const defenderWon = ['Lost', 'Defended', 'Stalemate'].includes(att.result);
+                      
+                      if (attId === myId && defId === enemyId) {
+                         if (attackerWon) wins++;
+                         else if (defenderWon) losses++;
+                      } else if (attId === enemyId && defId === myId) {
+                         if (attackerWon) losses++;
+                         else if (defenderWon) wins++;
+                      }
+                   });
+                }
+                
+                // Calculate faction score contribution using data.attacks
+                if (data && data.attacks) {
                    Object.values(data.attacks).forEach(att => {
                       const attTime = att.timestamp_ended || att.timestamp_started || att.ended || att.started || 0;
                       if (warStart > 0 && attTime < warStart) return;
@@ -347,14 +379,6 @@ const FactionWarRoom = () => {
                       
                       if (attId === enemyId && attackerWon) calculatedScore += respectGain;
                       if (defId === enemyId && defenderWon) calculatedScore += respectGain;
-                      
-                      if (attId === myId && defId === enemyId) {
-                         if (attackerWon) wins++;
-                         else if (defenderWon) losses++;
-                      } else if (attId === enemyId && defId === myId) {
-                         if (attackerWon) losses++;
-                         else if (defenderWon) wins++;
-                      }
                    });
                 }
                 
@@ -508,7 +532,7 @@ const FactionWarRoom = () => {
               
               <div className="metric-card" style={{ margin: 0 }}>
                 <h3 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   Recent Operations 
+                   Recent Attacks 
                    <span title="Total faction attacks within the last 24h cycle" style={{ cursor: 'help', fontSize: '0.8rem', color: 'var(--text-muted)' }}>ℹ️</span>
                 </h3>
                 <div className="metric-value">{data.attacks ? Object.keys(data.attacks).length : 0}</div>
