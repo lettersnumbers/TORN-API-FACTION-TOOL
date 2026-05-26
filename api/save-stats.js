@@ -21,15 +21,33 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Check Redis is configured
-  const REDIS_URL = process.env.UPSTASH_REDIS_REST_URL;
-  const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+  // Check Redis is configured — try all common Upstash/KV env var name variants
+  // Vercel injects different names depending on the integration prefix setting
+  const REDIS_URL =
+    process.env.UPSTASH_REDIS_REST_URL ||   // prefix = UPSTASH_REDIS (recommended)
+    process.env.KV_REST_API_URL        ||   // Vercel KV default (no prefix)
+    process.env.STORAGE_REST_API_URL   ||   // prefix = STORAGE
+    process.env.STORAGE_URL            ||   // prefix = STORAGE short form
+    null;
+
+  const REDIS_TOKEN =
+    process.env.UPSTASH_REDIS_REST_TOKEN || // prefix = UPSTASH_REDIS (recommended)
+    process.env.KV_REST_API_TOKEN      ||   // Vercel KV default (no prefix)
+    process.env.STORAGE_REST_API_TOKEN ||   // prefix = STORAGE
+    process.env.STORAGE_TOKEN          ||   // prefix = STORAGE short form
+    null;
+
   if (!REDIS_URL || !REDIS_TOKEN) {
+    const presentVars = Object.keys(process.env).filter(k =>
+      k.includes('UPSTASH') || k.includes('REDIS') || k.includes('KV_') || k.includes('STORAGE')
+    );
     return res.status(503).json({
       error: 'Redis not configured',
-      setup: 'Connect Upstash Redis via https://vercel.com/integrations/upstash and redeploy.'
+      hint: 'Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in Vercel Environment Variables',
+      env_vars_found: presentVars
     });
   }
+
 
   // Extract and verify the user's API key
   const authHeader = req.headers.authorization || '';
