@@ -147,7 +147,8 @@ export const fetchFactionPastWars = async (factionId = '') => {
 export const fetchUserData = async () => {
   const key = getApiKey();
   if (!key) throw new Error("API Key is missing. Please configure it.");
-  const selections = 'profile,basic,bars,job,faction';
+  // Fetch basic profile data that works reliably on v2
+  const selections = 'basic,bars,job,faction';
 
   try {
     const response = await axios.get(`${BASE_URL}/user?selections=${selections}`, {
@@ -156,26 +157,65 @@ export const fetchUserData = async () => {
     const d = response.data;
     if (d.error) throw new Error(d.error.error || "API Error in User Fetch");
 
-    return { ...d, ...(d.profile || {}), ...(d.basic || {}), ...(d.bars || {}) };
+    // v2 returns data at the top level, plus nested objects for some selections
+    // Flatten carefully so player_id, name, level, rank, age are always at root
+    const basic = d.basic || {};
+    const bars  = d.bars  || {};
+    const job   = d.job   || d.job_points || {};
+    const faction = d.faction || {};
+
+    return {
+      ...d,
+      ...basic,
+      // bars come back nested — hoist them so user.life, user.energy etc work
+      life:   bars.life   || d.life,
+      energy: bars.energy || d.energy,
+      nerve:  bars.nerve  || d.nerve,
+      happy:  bars.happy  || d.happy,
+      // ensure these are always at root
+      player_id: d.player_id || basic.player_id,
+      name:      d.name      || basic.name,
+      level:     d.level     || basic.level,
+      rank:      d.rank      || basic.rank,
+      age:       d.age       || basic.age,
+      status:    d.status    || basic.status,
+      job:  { name: job.company_name || job.name || job.job || 'Unemployed', ...job },
+      faction: {
+        name:            faction.faction_name || faction.name || 'None',
+        position:        faction.position     || 'Member',
+        days_in_faction: faction.days_in_faction || 0,
+        ...faction
+      },
+    };
   } catch (error) {
     if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
     throw error;
   }
 };
 
+// Sub-endpoints that must use /v2/user/{sub} instead of ?selections=
+const V2_SUB_ENDPOINTS = new Set(['personalstats', 'crimes', 'travel', 'attacks', 'battlestats']);
+
 export const fetchUserSpecific = async (selections, additionalParams = '') => {
   const key = getApiKey();
   if (!key) throw new Error("API Key is missing.");
   
   try {
-    const response = await axios.get(`${BASE_URL}/user?selections=${selections}${additionalParams}`, {
+    // Some selections are dedicated sub-endpoints in v2, not ?selections= params
+    const firstSel = selections.split(',')[0].trim();
+    const url = V2_SUB_ENDPOINTS.has(firstSel)
+      ? `${BASE_URL}/user/${firstSel}`
+      : `${BASE_URL}/user?selections=${selections}${additionalParams}`;
+
+    const response = await axios.get(url, {
       headers: { 'Authorization': `ApiKey ${key}` }
     });
     const d = response.data;
     if (d.error) throw new Error(d.error.error || "API Error in User Fetch");
 
+    // Flatten any top-level selection key into the root object
     let flattened = { ...d };
-    selections.split(',').forEach(sel => { if (d[sel]) flattened = { ...flattened, ...d[sel] }; });
+    selections.split(',').forEach(sel => { if (d[sel.trim()]) flattened = { ...flattened, ...d[sel.trim()] }; });
     return flattened;
   } catch (error) {
     if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
@@ -212,14 +252,14 @@ export const fetchUserCrimes = async () => {
   if (!key) throw new Error("API Key is missing.");
   
   try {
-    // Get the full crimes data for the logged-in user directly
-    const r = await axios.get(`${BASE_URL}/user?selections=crimes`, {
+    // v2 crimes data lives at the dedicated sub-endpoint /v2/user/crimes
+    const r = await axios.get(`${BASE_URL}/user/crimes`, {
       headers: { 'Authorization': `ApiKey ${key}` }
     });
     const d = r.data;
     if (d.error) throw new Error(d.error.error || "API Error fetching crimes");
     
-    // The v2 user?selections=crimes endpoint returns crimes directly
+    // Response is { crimes: { CrimeName: {...}, ... } } or crimes at root
     return d.crimes || d;
   } catch (error) {
     if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
