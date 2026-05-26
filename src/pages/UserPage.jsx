@@ -133,24 +133,30 @@ const UserPage = () => {
     console.log('User object:', { player_id: user.player_id, name: user.name, level: user.level });
 
     try {
-      // Step 1: Fetch personalstats
-      console.log('[Share Stats] Step 1: Fetching personalstats...');
-      const statsData = await fetchUserSpecific('personalstats');
-      console.log('[Share Stats] personalstats raw response:', statsData);
+      // Step 1: Fetch battlestats — the actual gym numbers (STR/SPD/DEF/DEX)
+      // Note: battlestats are private — only visible with the player's own API key.
+      // This is the whole point: we capture them here and store them for faction view.
+      console.log('[Share Stats] Step 1: Fetching battlestats...');
+      const statsData = await fetchUserSpecific('battlestats');
+      console.log('[Share Stats] battlestats raw response:', statsData);
 
-      const ps = statsData.personalstats || statsData;
+      // v1 battlestats response returns numbers directly at root:
+      // { strength: 1234567, speed: 2345678, defense: 3456789, dexterity: 4567890, total: 11604924 }
       const payload = {
         player_id: user.player_id,
         name: user.name,
         level: user.level,
         stats: {
-          strength:    ps.strength    || 0,
-          defense:     ps.defense     || 0,
-          speed:       ps.speed       || 0,
-          dexterity:   ps.dexterity   || 0,
-          total:       ps.total       || 0,
-          attacks_won: ps.attacks_won || 0,
-          defends_won: ps.defends_won || 0,
+          strength:  statsData.strength  || 0,
+          speed:     statsData.speed     || 0,
+          defense:   statsData.defense   || 0,
+          dexterity: statsData.dexterity || 0,
+          total:     statsData.total     || (
+            (statsData.strength || 0) +
+            (statsData.speed    || 0) +
+            (statsData.defense  || 0) +
+            (statsData.dexterity|| 0)
+          ),
         }
       };
       console.log('[Share Stats] Step 2: Sending payload to /api/save-stats:', payload);

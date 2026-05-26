@@ -192,7 +192,7 @@ export const fetchUserData = async () => {
 };
 
 // Selections that must use v1 API (not supported as v2 ?selections= or sub-endpoints)
-const V1_ONLY_SELECTIONS = new Set(['personalstats', 'crimes', 'travel', 'profile', 'workstats']);
+const V1_ONLY_SELECTIONS = new Set(['personalstats', 'crimes', 'travel', 'profile', 'workstats', 'battlestats']);
 
 export const fetchUserSpecific = async (selections, additionalParams = '') => {
   const key = getApiKey();
