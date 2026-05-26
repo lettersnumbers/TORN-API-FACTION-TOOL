@@ -147,44 +147,42 @@ export const fetchFactionPastWars = async (factionId = '') => {
 export const fetchUserData = async () => {
   const key = getApiKey();
   if (!key) throw new Error("API Key is missing. Please configure it.");
-  // Fetch basic profile data that works reliably on v2
-  const selections = 'basic,bars,job,faction';
+  // Use v1 for user profile — it reliably returns player_id, name, level, rank, age
+  // v2 user endpoint has inconsistent field nesting depending on selections used
+  const V1_URL = 'https://api.torn.com';
 
   try {
-    const response = await axios.get(`${BASE_URL}/user?selections=${selections}`, {
-      headers: { 'Authorization': `ApiKey ${key}` }
+    const response = await axios.get(`${V1_URL}/user/?selections=profile,bars,personalstats`, {
+      params: { key }
     });
     const d = response.data;
     if (d.error) throw new Error(d.error.error || "API Error in User Fetch");
 
-    // v2 returns data at the top level, plus nested objects for some selections
-    // Flatten carefully so player_id, name, level, rank, age are always at root
-    const basic = d.basic || {};
-    const bars  = d.bars  || {};
-    const job   = d.job   || d.job_points || {};
-    const faction = d.faction || {};
-
+    // v1 response: profile fields at root, bars nested under property names
     return {
       ...d,
-      ...basic,
-      // bars come back nested — hoist them so user.life, user.energy etc work
-      life:   bars.life   || d.life,
-      energy: bars.energy || d.energy,
-      nerve:  bars.nerve  || d.nerve,
-      happy:  bars.happy  || d.happy,
-      // ensure these are always at root
-      player_id: d.player_id || basic.player_id,
-      name:      d.name      || basic.name,
-      level:     d.level     || basic.level,
-      rank:      d.rank      || basic.rank,
-      age:       d.age       || basic.age,
-      status:    d.status    || basic.status,
-      job:  { name: job.company_name || job.name || job.job || 'Unemployed', ...job },
+      // Explicit mapping so UserPage never gets undefined for key fields
+      player_id: d.player_id,
+      name:      d.name,
+      level:     d.level,
+      rank:      d.rank,
+      age:       d.age,
+      status:    d.status,
+      // v1 returns life/energy/nerve/happy directly at root as objects
+      life:   d.life,
+      energy: d.energy,
+      nerve:  d.nerve,
+      happy:  d.happy,
+      // faction & job from profile
       faction: {
-        name:            faction.faction_name || faction.name || 'None',
-        position:        faction.position     || 'Member',
-        days_in_faction: faction.days_in_faction || 0,
-        ...faction
+        name:            d.faction?.faction_name || d.faction?.name || 'None',
+        position:        d.faction?.position     || 'Member',
+        days_in_faction: d.faction?.days_in_faction || 0,
+        ...(d.faction || {})
+      },
+      job: {
+        name: d.job?.company_name || d.job?.name || d.job?.job || 'Unemployed',
+        ...(d.job || {})
       },
     };
   } catch (error) {
@@ -193,29 +191,37 @@ export const fetchUserData = async () => {
   }
 };
 
-// Sub-endpoints that must use /v2/user/{sub} instead of ?selections=
-const V2_SUB_ENDPOINTS = new Set(['personalstats', 'crimes', 'travel', 'attacks', 'battlestats']);
+// Selections that must use v1 API (not supported as v2 ?selections= or sub-endpoints)
+const V1_ONLY_SELECTIONS = new Set(['personalstats', 'crimes', 'travel', 'profile', 'workstats']);
 
 export const fetchUserSpecific = async (selections, additionalParams = '') => {
   const key = getApiKey();
   if (!key) throw new Error("API Key is missing.");
   
-  try {
-    // Some selections are dedicated sub-endpoints in v2, not ?selections= params
-    const firstSel = selections.split(',')[0].trim();
-    const url = V2_SUB_ENDPOINTS.has(firstSel)
-      ? `${BASE_URL}/user/${firstSel}`
-      : `${BASE_URL}/user?selections=${selections}${additionalParams}`;
+  const V1_URL = 'https://api.torn.com';
 
-    const response = await axios.get(url, {
-      headers: { 'Authorization': `ApiKey ${key}` }
-    });
+  try {
+    const firstSel = selections.split(',')[0].trim();
+    let response;
+
+    if (V1_ONLY_SELECTIONS.has(firstSel)) {
+      // Use v1 API for these selections
+      response = await axios.get(`${V1_URL}/user/?selections=${selections}`, {
+        params: { key }
+      });
+    } else {
+      // Use v2 API for everything else
+      response = await axios.get(`${BASE_URL}/user?selections=${selections}${additionalParams}`, {
+        headers: { 'Authorization': `ApiKey ${key}` }
+      });
+    }
+
     const d = response.data;
     if (d.error) throw new Error(d.error.error || "API Error in User Fetch");
 
     // Flatten any top-level selection key into the root object
     let flattened = { ...d };
-    selections.split(',').forEach(sel => { if (d[sel.trim()]) flattened = { ...flattened, ...d[sel.trim()] }; });
+    selections.split(',').forEach(sel => { const s = sel.trim(); if (d[s] && typeof d[s] === 'object') flattened = { ...flattened, ...d[s] }; });
     return flattened;
   } catch (error) {
     if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
@@ -250,16 +256,16 @@ export const fetchAnyUserSpecific = async (userId, selections) => {
 export const fetchUserCrimes = async () => {
   const key = getApiKey();
   if (!key) throw new Error("API Key is missing.");
-  
+
   try {
-    // v2 crimes data lives at the dedicated sub-endpoint /v2/user/crimes
-    const r = await axios.get(`${BASE_URL}/user/crimes`, {
-      headers: { 'Authorization': `ApiKey ${key}` }
+    // v1 API endpoint for crimes — reliably returns the logged-in user's crime data
+    const r = await axios.get('https://api.torn.com/user/?selections=crimes', {
+      params: { key }
     });
     const d = r.data;
     if (d.error) throw new Error(d.error.error || "API Error fetching crimes");
-    
-    // Response is { crimes: { CrimeName: {...}, ... } } or crimes at root
+
+    // v1 returns { crimes: { CrimeName: {...} } }
     return d.crimes || d;
   } catch (error) {
     if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
