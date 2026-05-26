@@ -204,32 +204,65 @@ export const fetchAnyUserSpecific = async (userId, selections) => {
   }
 };
 
+
+
+
 export const fetchUserCrimes = async () => {
   const key = getApiKey();
   if (!key) throw new Error("API Key is missing.");
   
   try {
-    const tornRes = await axios.get(`${BASE_URL}/torn/crimes`, { headers: { 'Authorization': `ApiKey ${key}` } });
-    const tornD = tornRes.data;
-    if (tornD.error) throw new Error(tornD.error.error || "API Error fetching crime list");
+    // Get the full crimes data for the logged-in user directly
+    const r = await axios.get(`${BASE_URL}/user?selections=crimes`, {
+      headers: { 'Authorization': `ApiKey ${key}` }
+    });
+    const d = r.data;
+    if (d.error) throw new Error(d.error.error || "API Error fetching crimes");
     
-    const crimeIds = Object.keys(tornD.crimes || {});
-    const combined = {};
-
-    for (const crimeId of crimeIds) {
-      try {
-        const r = await axios.get(`${BASE_URL}/user/${crimeId}/crimes`, { headers: { 'Authorization': `ApiKey ${key}` } });
-        const crimeData = r.data.crimes || r.data;
-        const mappedName = tornD.crimes[crimeId]?.name || `Crime ${crimeId}`;
-        combined[mappedName] = crimeData;
-      } catch(e) {
-        console.warn(`Could not fetch crime ${crimeId}`, e.message);
-      }
-      await new Promise(res => setTimeout(res, 200));
-    }
-    return combined;
+    // The v2 user?selections=crimes endpoint returns crimes directly
+    return d.crimes || d;
   } catch (error) {
     if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
     throw error;
+  }
+};
+
+// ==========================================
+// SHARED STATS SYSTEM (Upstash Redis)
+// ==========================================
+
+/**
+ * Save current user's stats to the backend Redis store.
+ * @param {Object} userData - { player_id, name, level, stats }
+ */
+export const saveUserStats = async (userData) => {
+  const key = getApiKey();
+  if (!key) throw new Error("API Key is missing.");
+  
+  const endpoint = IS_LOCAL ? 'http://localhost:3000/api/save-stats' : '/api/save-stats';
+  
+  const response = await axios.post(endpoint, userData, {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `ApiKey ${key}`
+    }
+  });
+  
+  if (response.data?.error) throw new Error(response.data.error);
+  return response.data;
+};
+
+/**
+ * Fetch all faction member stats from the backend Redis store.
+ * @returns {Promise<{members: Array, configured: boolean}>}
+ */
+export const getFactionMemberStats = async () => {
+  const endpoint = IS_LOCAL ? 'http://localhost:3000/api/get-faction-stats' : '/api/get-faction-stats';
+  try {
+    const response = await axios.get(endpoint);
+    return response.data;
+  } catch (error) {
+    console.warn('Could not fetch faction member stats:', error.message);
+    return { members: [], configured: false };
   }
 };

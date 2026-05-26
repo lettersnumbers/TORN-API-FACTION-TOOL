@@ -1,8 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFactionData, getApiKey, setApiKey, getFactionId, setFactionId } from '../services/api';
+import { fetchFactionData, getApiKey, setApiKey, getFactionId, setFactionId, getFactionMemberStats } from '../services/api';
 import { useDataContext } from '../context/DataContext';
 import ExpandedMemberRow from '../components/ExpandedMemberRow';
 import './FactionPage.css';
+
+const MemberAvatar = ({ playerId, name }) => {
+  const [imgError, setImgError] = useState(false);
+  const color = (() => {
+    let h = 0;
+    for (let i = 0; i < (name || '').length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+    return `hsl(${Math.abs(h) % 360}, 60%, 45%)`;
+  })();
+  const initials = (name || 'U').slice(0, 2).toUpperCase();
+  if (imgError || !playerId) {
+    return (
+      <div className="avatar-initials" style={{ background: color }}>{initials}</div>
+    );
+  }
+  return (
+    <img
+      src={`https://avatars.torn.com/avatars/${playerId}_small.jpg`}
+      alt={name}
+      className="avatar-thumb"
+      onError={() => setImgError(true)}
+      loading="lazy"
+    />
+  );
+};
 
 const FactionPage = () => {
   const { setFactionName, setHospitalCount } = useDataContext();
@@ -19,6 +43,25 @@ const FactionPage = () => {
   const [expandedUser, setExpandedUser] = useState(null);
   const [userStatsLoading, setUserStatsLoading] = useState({});
   const [userStatsData, setUserStatsData] = useState({});
+
+  const [memberStats, setMemberStats] = useState([]);
+  const [showIntel, setShowIntel] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  useEffect(() => {
+    const loadMemberStats = async () => {
+      setStatsLoading(true);
+      try {
+        const result = await getFactionMemberStats();
+        setMemberStats(result.members || []);
+      } catch (e) {
+        // Silently fail if Redis not configured
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+    loadMemberStats();
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--accent-primary', '#a855f7');
@@ -252,6 +295,7 @@ const FactionPage = () => {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             <div className="member-name">
                               <span className={`status-dot ${member.status?.state === 'Online' ? 'online' : member.status?.state === 'Idle' ? 'idle' : 'offline'}`}></span>
+                              <MemberAvatar playerId={member.id} name={member.name} />
                               <span style={{color: isExpanded ? 'var(--accent-primary)' : 'inherit', transition: 'color 0.2s', fontWeight: isExpanded ? 'bold' : 'normal'}}>{member.name}</span> 
                             </div>
                             <a 
@@ -289,6 +333,83 @@ const FactionPage = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Member Intel Panel */}
+      <div className="member-intel-panel">
+        <div className="intel-panel-header" onClick={() => setShowIntel(o => !o)}>
+          <div className="intel-panel-title">
+            <div className="intel-icon"></div>
+            Member Intel
+            {memberStats.length > 0 && (
+              <span className="intel-count-badge">{memberStats.length} agents</span>
+            )}
+          </div>
+          <span className={`intel-chevron ${showIntel ? 'open' : ''}`}>▾</span>
+        </div>
+        {showIntel && (
+          <div className="intel-panel-body">
+            {statsLoading ? (
+              <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontFamily: 'var(--font-heading)', letterSpacing: '2px', fontSize: '0.75rem' }}>LOADING AGENT PROFILES...</div>
+            ) : memberStats.length === 0 ? (
+              <div className="intel-setup-notice">
+                <div>No agent stats shared yet.</div>
+                <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>Members must visit their <strong>Profile page</strong> and click <strong>"Share Stats with Faction"</strong>.</div>
+                <div style={{ marginTop: '12px', fontSize: '0.75rem', color: 'rgba(148,163,184,0.5)' }}>Requires Upstash Redis setup:</div>
+                <code>vercel.com/integrations/upstash</code>
+              </div>
+            ) : (
+              <div className="intel-member-grid">
+                {memberStats.map((member) => {
+                  const age = Math.floor((Date.now() / 1000 - member.lastUpdated) / 86400);
+                  const staleness = age < 3 ? 'fresh' : age < 14 ? 'stale' : 'old';
+                  const stalenessLabel = age < 1 ? 'Today' : `${age}d ago`;
+                  const color = (() => { let h = 0; for (let i = 0; i < (member.name || '').length; i++) h = member.name.charCodeAt(i) + ((h << 5) - h); return `hsl(${Math.abs(h) % 360}, 60%, 45%)`; })();
+                  const initials = (member.name || 'U').slice(0, 2).toUpperCase();
+                  return (
+                    <div key={member.player_id} className="intel-card">
+                      <div className="intel-card-header">
+                        <div className="avatar-initials" style={{ background: color, width: '36px', height: '36px', fontSize: '0.7rem' }}>{initials}</div>
+                        <div>
+                          <div className="intel-card-name">{member.name}</div>
+                          <div className="intel-card-level">Lv. {member.level}</div>
+                        </div>
+                      </div>
+                      <div className="intel-stat-row">
+                        <div className="intel-stat">
+                          <div className="intel-stat-label">Strength</div>
+                          <div className="intel-stat-value">{(member.stats?.strength || 0).toLocaleString()}</div>
+                        </div>
+                        <div className="intel-stat">
+                          <div className="intel-stat-label">Defense</div>
+                          <div className="intel-stat-value">{(member.stats?.defense || 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="intel-stat-row">
+                        <div className="intel-stat">
+                          <div className="intel-stat-label">Speed</div>
+                          <div className="intel-stat-value">{(member.stats?.speed || 0).toLocaleString()}</div>
+                        </div>
+                        <div className="intel-stat">
+                          <div className="intel-stat-label">Dexterity</div>
+                          <div className="intel-stat-value">{(member.stats?.dexterity || 0).toLocaleString()}</div>
+                        </div>
+                      </div>
+                      <div className="intel-stat" style={{ marginTop: '8px', padding: '8px', background: 'rgba(0,240,255,0.03)', borderRadius: '4px' }}>
+                        <div className="intel-stat-label">Total Battle Stats</div>
+                        <div className="intel-stat-value highlight" style={{ fontSize: '1rem' }}>{(member.stats?.total || 0).toLocaleString()}</div>
+                      </div>
+                      <div className="intel-card-footer">
+                        <div className="intel-updated">Updated {stalenessLabel}</div>
+                        <span className={`intel-stale-badge ${staleness}`}>{staleness === 'fresh' ? 'FRESH' : staleness === 'stale' ? 'AGING' : 'STALE'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
