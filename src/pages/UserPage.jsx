@@ -128,30 +128,49 @@ const UserPage = () => {
   const handleShareStats = async () => {
     if (!user || shareStatus === 'sharing') return;
     setShareStatus('sharing');
+
+    console.group('[Share Stats] Starting...');
+    console.log('User object:', { player_id: user.player_id, name: user.name, level: user.level });
+
     try {
+      // Step 1: Fetch personalstats
+      console.log('[Share Stats] Step 1: Fetching personalstats...');
       const statsData = await fetchUserSpecific('personalstats');
+      console.log('[Share Stats] personalstats raw response:', statsData);
+
       const ps = statsData.personalstats || statsData;
-      await saveUserStats({
+      const payload = {
         player_id: user.player_id,
         name: user.name,
         level: user.level,
         stats: {
-          strength: ps.strength || 0,
-          defense: ps.defense || 0,
-          speed: ps.speed || 0,
-          dexterity: ps.dexterity || 0,
-          total: ps.total || 0,
+          strength:    ps.strength    || 0,
+          defense:     ps.defense     || 0,
+          speed:       ps.speed       || 0,
+          dexterity:   ps.dexterity   || 0,
+          total:       ps.total       || 0,
           attacks_won: ps.attacks_won || 0,
           defends_won: ps.defends_won || 0,
         }
-      });
+      };
+      console.log('[Share Stats] Step 2: Sending payload to /api/save-stats:', payload);
+
+      // Step 2: Save to backend
+      const result = await saveUserStats(payload);
+      console.log('[Share Stats] Step 3: save-stats response:', result);
+
       const now = new Date().toISOString();
       localStorage.setItem('lastStatsShared', now);
       setLastShared(now);
       setShareStatus('success');
+      console.groupEnd();
       setTimeout(() => setShareStatus('idle'), 3000);
     } catch (err) {
-      console.warn('Share stats failed:', err.message);
+      console.error('[Share Stats] FAILED at some step:', err.message);
+      console.error('[Share Stats] Full error:', err);
+      console.error('[Share Stats] Response data:', err.response?.data);
+      console.error('[Share Stats] Response status:', err.response?.status);
+      console.groupEnd();
       setShareStatus('error');
       setTimeout(() => setShareStatus('idle'), 3000);
     }

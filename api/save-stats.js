@@ -51,19 +51,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields: player_id, name, stats' });
   }
 
-  // Verify the API key is valid by making a minimal Torn API call
+  // Verify the API key is valid by making a minimal Torn API call (v1, most reliable)
   try {
-    const tornRes = await fetch(`https://api.torn.com/v2/user?selections=basic`, {
-      headers: { 'Authorization': `ApiKey ${userKey}` }
-    });
+    const tornRes = await fetch(`https://api.torn.com/user/?selections=basic&key=${userKey}`);
     const tornData = await tornRes.json();
     if (tornData.error) {
       return res.status(401).json({ error: 'Torn API key verification failed', details: tornData.error });
     }
     // Verify the key belongs to the player claiming to share
-    const verifiedId = tornData.player_id || tornData.basic?.player_id;
+    const verifiedId = tornData.player_id;
     if (verifiedId && String(verifiedId) !== String(player_id)) {
-      return res.status(403).json({ error: 'API key does not match provided player_id' });
+      return res.status(403).json({
+        error: 'API key does not match provided player_id',
+        expected: String(player_id),
+        got: String(verifiedId)
+      });
     }
   } catch (e) {
     return res.status(502).json({ error: 'Could not verify API key with Torn', details: e.message });
@@ -87,15 +89,18 @@ export default async function handler(req, res) {
   };
 
   try {
-    // Use Upstash Redis REST API directly (no extra package needed)
+    // Upstash Redis REST API: SET key value
+    // The value must be a JSON string sent as the request body (plain text)
     const redisKey = `member-stats:${player_id}`;
+    const valueToStore = JSON.stringify(record);
+
     const setRes = await fetch(`${REDIS_URL}/set/${encodeURIComponent(redisKey)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${REDIS_TOKEN}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(JSON.stringify(record))
+      body: JSON.stringify(valueToStore)   // Upstash REST expects the value JSON-encoded as the body
     });
 
     if (!setRes.ok) {
@@ -103,11 +108,14 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'Redis write failed', details: errText });
     }
 
-    // Also add the player_id to an index set for easy retrieval
-    await fetch(`${REDIS_URL}/sadd/faction-stats-index/${player_id}`, {
+    // Add player_id to an index set for fast retrieval of all members
+    const saddRes = await fetch(`${REDIS_URL}/sadd/faction-stats-index/${player_id}`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${REDIS_TOKEN}` }
     });
+    if (!saddRes.ok) {
+      console.warn('[save-stats] sadd index warning:', await saddRes.text());
+    }
 
     return res.status(200).json({ success: true, player_id, lastUpdated: record.lastUpdated });
   } catch (e) {
