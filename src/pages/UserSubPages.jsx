@@ -419,3 +419,98 @@ export const UserCrimes = () => {
     </div>
   );
 };
+
+export const UserBattleStats = () => {
+  const { userName } = useDataContext();
+  const { data, loading, error } = useSubPageFetch('battlestats');
+
+  const fmt = (n) => n ? Number(n).toLocaleString() : '—';
+  const pct = (val, total) => total ? Math.round((val / total) * 100) : 0;
+
+  const renderContent = () => {
+    if (!data) return <div className="error-message">No battle stats data available.</div>;
+
+    const str   = data.strength  || 0;
+    const spd   = data.speed     || 0;
+    const def   = data.defense   || 0;
+    const dex   = data.dexterity || 0;
+    const total = data.total     || (str + spd + def + dex);
+
+    const statList = [
+      { label: 'Strength',  value: str, color: '#ef4444', glow: 'rgba(239,68,68,0.4)' },
+      { label: 'Defense',   value: def, color: '#3b82f6', glow: 'rgba(59,130,246,0.4)' },
+      { label: 'Speed',     value: spd, color: '#22c55e', glow: 'rgba(34,197,94,0.4)'  },
+      { label: 'Dexterity', value: dex, color: '#a855f7', glow: 'rgba(168,85,247,0.4)' },
+    ];
+
+    return (
+      <>
+        {/* Total banner */}
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(0,240,255,0.06), rgba(0,240,255,0.02))',
+          border: '1px solid rgba(0,240,255,0.2)', borderRadius: '12px',
+          padding: '24px 32px', marginBottom: '24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px',
+        }}>
+          <div>
+            <div style={{ fontSize: '0.6rem', letterSpacing: '3px', color: 'rgba(0,240,255,0.5)', fontFamily: 'var(--font-heading)', marginBottom: '6px' }}>TOTAL BATTLE STATS</div>
+            <div style={{ fontFamily: 'Orbitron,monospace', fontSize: '2.4rem', fontWeight: '700', color: 'var(--accent-primary)', textShadow: '0 0 30px rgba(0,240,255,0.4)', letterSpacing: '2px' }}>{fmt(total)}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 28px' }}>
+            {statList.map(s => (
+              <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: s.color, boxShadow: `0 0 6px ${s.glow}`, flexShrink: 0 }} />
+                <span style={{ fontSize: '0.65rem', color: 'rgba(148,163,184,0.7)', letterSpacing: '1px', fontFamily: 'var(--font-heading)' }}>{s.label.toUpperCase()}</span>
+                <span style={{ fontFamily: 'Orbitron,monospace', fontSize: '0.8rem', color: '#e2e8f0' }}>{fmt(s.value)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Individual bars */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {statList.map(s => {
+            const share = pct(s.value, total);
+            return (
+              <div key={s.label} style={{
+                background: 'rgba(0,6,14,0.8)', border: '1px solid rgba(0,240,255,0.08)',
+                borderRadius: '10px', padding: '20px 24px', position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${s.color}, transparent)`, opacity: 0.6 }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: s.color, boxShadow: `0 0 8px ${s.glow}` }} />
+                    <span style={{ fontFamily: 'var(--font-heading)', fontSize: '0.85rem', letterSpacing: '2px', textTransform: 'uppercase', color: '#e2e8f0' }}>{s.label}</span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontFamily: 'Orbitron,monospace', fontSize: '1.3rem', fontWeight: '700', color: s.color, textShadow: `0 0 15px ${s.glow}` }}>{fmt(s.value)}</div>
+                    <div style={{ fontSize: '0.65rem', color: 'rgba(148,163,184,0.5)', letterSpacing: '1px' }}>{share}% of total</div>
+                  </div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', borderRadius: '4px', width: `${share}%`, background: `linear-gradient(90deg, ${s.color}88, ${s.color})`, boxShadow: `0 0 10px ${s.glow}`, transition: 'width 1s ease' }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ marginTop: '16px', fontSize: '0.65rem', color: 'rgba(148,163,184,0.35)', textAlign: 'center', letterSpacing: '1px', fontFamily: 'var(--font-heading)' }}>
+          BATTLE STATS ARE PRIVATE — ONLY VISIBLE WITH YOUR OWN API KEY
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <h1>Battle Stats :: <span className="accent-text">{userName}</span></h1>
+        <p style={{ color: 'var(--text-muted)', marginTop: '4px', fontSize: '0.85rem' }}>Gym training — Strength, Speed, Defense, Dexterity</p>
+      </div>
+      {error ? <div className="error-message">Error: {error}</div>
+        : loading ? <LoadingState message="DECRYPTING GYM STATS" />
+        : renderContent()}
+    </div>
+  );
+};

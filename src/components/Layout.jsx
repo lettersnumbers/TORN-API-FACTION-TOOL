@@ -132,6 +132,7 @@ const Layout = ({ children }) => {
               <NavLink to="/user/crimes" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Crimes & Skill</NavLink>
               <NavLink to="/user/stats" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Personal Stats</NavLink>
               <NavLink to="/user/travel" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Flight & Travel</NavLink>
+              <NavLink to="/user/battle-stats" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Battle Stats</NavLink>
             </div>
           </div>
         </nav>

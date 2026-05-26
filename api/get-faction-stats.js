@@ -53,9 +53,17 @@ export default async function handler(req, res) {
           headers: { 'Authorization': `Bearer ${REDIS_TOKEN}` }
         });
         const memberData = await memberRes.json();
-        if (memberData.result) {
-          const parsed = typeof memberData.result === 'string' ? JSON.parse(memberData.result) : memberData.result;
-          members.push(parsed);
+        if (memberData.result !== null && memberData.result !== undefined) {
+          // Parse until we get an object — handles single or double JSON encoding
+          let parsed = memberData.result;
+          let iterations = 0;
+          while (typeof parsed === 'string' && iterations < 3) {
+            try { parsed = JSON.parse(parsed); } catch { break; }
+            iterations++;
+          }
+          if (parsed && typeof parsed === 'object') {
+            members.push(parsed);
+          }
         }
       } catch (e) {
         // Skip this member if parse fails

@@ -5,7 +5,7 @@ import FactionAttacks from './pages/FactionAttacks';
 import FactionArmory from './pages/FactionArmory';
 import FactionFunds from './pages/FactionFunds';
 import PastWars from './pages/PastWars';
-import { UserCrimes, UserStats, UserTravel } from './pages/UserSubPages';
+import { UserCrimes, UserStats, UserTravel, UserBattleStats } from './pages/UserSubPages';
 import UserPage from './pages/UserPage';
 import Layout from './components/Layout';
 
@@ -28,6 +28,7 @@ function App() {
             <Route path="/user/crimes" element={<UserCrimes />} />
             <Route path="/user/stats" element={<UserStats />} />
             <Route path="/user/travel" element={<UserTravel />} />
+            <Route path="/user/battle-stats" element={<UserBattleStats />} />
           </Routes>
         </Layout>
       </BrowserRouter>
