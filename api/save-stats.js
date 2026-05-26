@@ -24,17 +24,19 @@ export default async function handler(req, res) {
   // Check Redis is configured — try all common Upstash/KV env var name variants
   // Vercel injects different names depending on the integration prefix setting
   const REDIS_URL =
-    process.env.UPSTASH_REDIS_REST_URL ||   // prefix = UPSTASH_REDIS (recommended)
-    process.env.KV_REST_API_URL        ||   // Vercel KV default (no prefix)
-    process.env.STORAGE_REST_API_URL   ||   // prefix = STORAGE
-    process.env.STORAGE_URL            ||   // prefix = STORAGE short form
+    process.env.UPSTASH_REDIS_KV_REST_API_URL ||  // actual name Vercel injected
+    process.env.UPSTASH_REDIS_REST_URL         ||  // prefix = UPSTASH_REDIS
+    process.env.KV_REST_API_URL                ||  // Vercel KV default
+    process.env.STORAGE_REST_API_URL           ||  // prefix = STORAGE
+    process.env.STORAGE_URL                    ||
     null;
 
   const REDIS_TOKEN =
-    process.env.UPSTASH_REDIS_REST_TOKEN || // prefix = UPSTASH_REDIS (recommended)
-    process.env.KV_REST_API_TOKEN      ||   // Vercel KV default (no prefix)
-    process.env.STORAGE_REST_API_TOKEN ||   // prefix = STORAGE
-    process.env.STORAGE_TOKEN          ||   // prefix = STORAGE short form
+    process.env.UPSTASH_REDIS_KV_REST_API_TOKEN || // actual name Vercel injected
+    process.env.UPSTASH_REDIS_REST_TOKEN        || // prefix = UPSTASH_REDIS
+    process.env.KV_REST_API_TOKEN               || // Vercel KV default
+    process.env.STORAGE_REST_API_TOKEN          ||
+    process.env.STORAGE_TOKEN                   ||
     null;
 
   if (!REDIS_URL || !REDIS_TOKEN) {
