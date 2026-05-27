@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import {
   fetchFactionData, getFactionMemberStats, getMemberHistory,
-  getApiKey, fetchUserSpecific, saveUserStats, fetchUserData,
+  getApiKey, getFactionId, fetchUserSpecific, saveUserStats, fetchUserData,
 } from '../services/api';
 import { useDataContext } from '../context/DataContext';
 import './FactionPage.css';
@@ -80,19 +80,27 @@ const FactionBattleStats = () => {
     (async () => {
       setLoadingRoster(true);
       try {
-        const d = await fetchFactionData('/v2/faction', { selections: 'basic,members' });
+        const d = await fetchFactionData(getFactionId());
+        // fetchFactionData returns { members: obj|array, name, ... }
+        // Torn v2 members is an object keyed by player_id string: { "123": { name, level, ... } }
         const raw = d?.members || {};
-        setRoster(Object.entries(raw).map(([id, m]) => ({
-          player_id: parseInt(id),
-          name: m.name,
-          level: m.level,
-          position: m.position,
-          days_in_faction: m.days_in_faction,
-          last_action: m.last_action,
-          status: m.status,
-        })));
-      } catch (e) { setError(e.message); }
-      finally { setLoadingRoster(false); }
+        const list = Array.isArray(raw)
+          ? raw.map(m => ({ ...m, player_id: parseInt(m.id || m.player_id) }))
+          : Object.entries(raw).map(([id, m]) => ({
+              player_id: parseInt(id),
+              name: m.name,
+              level: m.level,
+              position: m.position,
+              days_in_faction: m.days_in_faction,
+              last_action: m.last_action,
+              status: m.status,
+            }));
+        setRoster(list);
+      } catch (e) {
+        setError(e?.message || String(e));
+      } finally {
+        setLoadingRoster(false);
+      }
     })();
   }, []);
 
