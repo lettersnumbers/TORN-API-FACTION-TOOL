@@ -414,41 +414,40 @@ const FactionBattleStats = () => {
                     ))}
                   </div>
 
-                  {lineData.length < 2 ? (
-                    <div style={{ textAlign:'center', padding:'32px', color:'var(--text-muted)', fontSize:'0.8rem', fontFamily:'var(--font-heading)', letterSpacing:'1px' }}>
-                      <div style={{ fontSize:'1.5rem', marginBottom:8 }}>📍</div>
-                      Only 1 snapshot saved — chart will populate as stats are re-shared over time
-                      <div style={{ marginTop:16, padding:'12px 20px', background:'rgba(0,240,255,0.04)', border:'1px solid rgba(0,240,255,0.1)', borderRadius:8, display:'inline-block' }}>
-                        {selMember.savedStats && Object.entries(selMember.savedStats.stats||{}).filter(([k]) => k!=='attacks_won'&&k!=='defends_won').map(([k,v]) => (
-                          <div key={k} style={{ fontSize:'0.75rem', color:'rgba(148,163,184,0.7)', textAlign:'left' }}>
-                            <span style={{ color: STAT_CFG.find(s=>s.key===k)?.color||'#fff', fontFamily:'var(--font-heading)', letterSpacing:'1px', marginRight:8 }}>{k.toUpperCase()}:</span>
-                            <span style={{ fontFamily:'Orbitron,monospace' }}>{fmt(v)}</span>
-                          </div>
-                        ))}
-                      </div>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={lineData.length ? lineData : [{ date: fmtTs(selMember.savedStats?.lastUpdated), ...selMember.savedStats?.stats }]} margin={{ top:5, right:20, left:10, bottom:5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                      <XAxis dataKey="date" tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }} axisLine={{ stroke:'rgba(255,255,255,0.08)' }} tickLine={false} />
+                      <YAxis
+                        tickFormatter={fmtM}
+                        tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }}
+                        axisLine={false} tickLine={false} width={62}
+                        domain={[
+                          (dataMin) => Math.max(0, Math.floor(dataMin * 0.85)),
+                          (dataMax) => Math.ceil(dataMax * 1.08),
+                        ]}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Legend wrapperStyle={{ fontFamily:'var(--font-heading)', fontSize:'0.65rem', letterSpacing:'1px', paddingTop:12 }} />
+                      {STAT_CFG.map(s => visibleStats[s.key] && (
+                        <Line
+                          key={s.key}
+                          type="monotone"
+                          dataKey={s.key}
+                          name={s.label}
+                          stroke={s.color}
+                          strokeWidth={s.key==='total' ? 2.5 : 1.5}
+                          dot={{ fill:s.color, r:5, strokeWidth:0 }}
+                          activeDot={{ r:7, fill:s.color, stroke:'rgba(0,0,0,0.5)', strokeWidth:2 }}
+                          isAnimationActive={true}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                  {selHistory.length < 2 && (
+                    <div style={{ textAlign:'center', marginTop:8, fontSize:'0.65rem', color:'rgba(148,163,184,0.35)', fontFamily:'var(--font-heading)', letterSpacing:'1px' }}>
+                      📍 1 SNAPSHOT — CHART WILL GROW AS STATS ARE RE-SHARED OVER TIME
                     </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={lineData} margin={{ top:5, right:20, left:10, bottom:5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                        <XAxis dataKey="date" tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }} axisLine={{ stroke:'rgba(255,255,255,0.08)' }} tickLine={false} />
-                        <YAxis tickFormatter={fmtM} tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }} axisLine={false} tickLine={false} width={55} />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Legend wrapperStyle={{ fontFamily:'var(--font-heading)', fontSize:'0.65rem', letterSpacing:'1px', paddingTop:12 }} />
-                        {STAT_CFG.map(s => visibleStats[s.key] && (
-                          <Line
-                            key={s.key}
-                            type="monotone"
-                            dataKey={s.key}
-                            name={s.label}
-                            stroke={s.color}
-                            strokeWidth={s.key==='total' ? 2.5 : 1.5}
-                            dot={{ fill:s.color, r:4, strokeWidth:0 }}
-                            activeDot={{ r:6, fill:s.color, stroke:'rgba(0,0,0,0.5)', strokeWidth:2 }}
-                          />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
                   )}
                 </>
               )}
@@ -488,7 +487,12 @@ const FactionBattleStats = () => {
                         textAnchor="end"
                         height={50}
                       />
-                      <YAxis tickFormatter={fmtM} tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }} axisLine={false} tickLine={false} width={55} />
+                      <YAxis
+                        tickFormatter={fmtM}
+                        tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }}
+                        axisLine={false} tickLine={false} width={62}
+                        domain={[0, (dataMax) => Math.ceil(dataMax * 1.12)]}
+                      />
                       <Tooltip content={<ChartTooltip />} />
                       <Legend wrapperStyle={{ fontFamily:'var(--font-heading)', fontSize:'0.65rem', letterSpacing:'1px', paddingTop:8 }} />
                       {STAT_CFG.slice(0,4).map(s => (
