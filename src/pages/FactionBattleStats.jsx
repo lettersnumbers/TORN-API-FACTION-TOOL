@@ -209,7 +209,7 @@ const FactionBattleStats = () => {
         ss?.speed     ?? '',
         ss?.dexterity ?? '',
         ss?.total     ?? '',
-        ts ? new Date(ts).toISOString().slice(0, 10) : '',
+        ts ? new Date(ts * 1000).toISOString().slice(0, 10) : '',
         pct30,
       ];
     });
