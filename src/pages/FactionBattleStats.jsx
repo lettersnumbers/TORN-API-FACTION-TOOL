@@ -183,7 +183,49 @@ const FactionBattleStats = () => {
       }),
   [memberStats, histories, THIRTY_DAYS_AGO]);
 
-  // ── Share stats handler ──────────────────────────────────────────────────
+  // ── CSV Export ──────────────────────────────────────────────────────
+  const exportCsv = useCallback(() => {
+    const headers = ['Name','Player ID','Level','Position','Strength','Defense','Speed','Dexterity','Total Stats','Last Updated','30-day % Change'];
+    const now     = Math.floor(Date.now() / 1000);
+    const ago30   = now - 30 * 86400;
+    const rows = merged.map(m => {
+      const ss   = m.savedStats?.stats;
+      const ts   = m.savedStats?.lastUpdated;
+      const hist = histories[m.player_id] || [];
+      const latest = hist[hist.length - 1];
+      const base   = [...hist].reverse().find(s => s.timestamp <= ago30) || hist[0];
+      let pct30 = '';
+      if (base && latest && base !== latest && base.total) {
+        const chg = ((latest.total - base.total) / base.total) * 100;
+        pct30 = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
+      }
+      return [
+        m.name,
+        m.player_id,
+        m.level   || '',
+        m.position|| '',
+        ss?.strength  ?? '',
+        ss?.defense   ?? '',
+        ss?.speed     ?? '',
+        ss?.dexterity ?? '',
+        ss?.total     ?? '',
+        ts ? new Date(ts).toISOString().slice(0, 10) : '',
+        pct30,
+      ];
+    });
+    const escape = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `faction-battle-stats-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [merged, histories]);
+
   const handleShareStats = async () => {
     if (shareStatus === 'sharing') return;
     setShareStatus('sharing');
@@ -252,7 +294,7 @@ const FactionBattleStats = () => {
 
       {/* ── Member Table ─────────────────────────────────────────────────── */}
       <div className="member-intel-panel" style={{ marginTop: 0, marginBottom: 24 }}>
-        <div className="intel-panel-header" style={{ cursor: 'default', pointerEvents: 'none' }}>
+        <div className="intel-panel-header" style={{ cursor: 'default', userSelect: 'none' }}>
           <div className="intel-panel-title">
             <div className="intel-icon" />
             Agent Intel
@@ -263,6 +305,27 @@ const FactionBattleStats = () => {
               </span>
             )}
           </div>
+          <button
+            onClick={exportCsv}
+            disabled={merged.length === 0}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px',
+              background: 'rgba(0,240,255,0.06)',
+              border: '1px solid rgba(0,240,255,0.22)',
+              borderRadius: 8,
+              color: 'var(--accent-primary)',
+              fontFamily: 'var(--font-heading)',
+              fontSize: '0.65rem', letterSpacing: '2px', textTransform: 'uppercase',
+              cursor: 'pointer', transition: 'all 0.2s',
+              flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(0,240,255,0.13)'; e.currentTarget.style.boxShadow='0 0 14px rgba(0,240,255,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(0,240,255,0.06)'; e.currentTarget.style.boxShadow='none'; }}
+            title="Download table as CSV"
+          >
+            ⬇ CSV
+          </button>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
