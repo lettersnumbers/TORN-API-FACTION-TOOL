@@ -78,7 +78,7 @@ const ArcBar = ({ label, current, max, color }) => {
 };
 
 const UserPage = () => {
-  const { setUserName, setUserHospitalStatus } = useDataContext();
+  const { setUserName, setUserHospitalStatus, setCurrentPlayerId } = useDataContext();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -107,6 +107,7 @@ const UserPage = () => {
       const userData = data.user || data;
       setUser(userData);
       if (data.name) setUserName(data.name);
+      if (data.player_id) setCurrentPlayerId(data.player_id);
       if (data.life) {
         const damageRatio = data.life.maximum > 0 ? 1 - (data.life.current / data.life.maximum) : 0;
         setUserHospitalStatus(damageRatio);

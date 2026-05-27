@@ -114,6 +114,7 @@ const Layout = ({ children }) => {
               <NavLink to="/faction/armory" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Armory</NavLink>
               <NavLink to="/faction/funds" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Faction Funds</NavLink>
               <NavLink to="/faction/past-wars" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Past Wars</NavLink>
+              <NavLink to="/faction/battle-stats" onClick={() => setIsMobileOpen(false)} className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>Battle Stats</NavLink>
             </div>
           </div>
 

@@ -5,6 +5,7 @@ import FactionAttacks from './pages/FactionAttacks';
 import FactionArmory from './pages/FactionArmory';
 import FactionFunds from './pages/FactionFunds';
 import PastWars from './pages/PastWars';
+import FactionBattleStats from './pages/FactionBattleStats';
 import { UserCrimes, UserStats, UserTravel, UserBattleStats } from './pages/UserSubPages';
 import UserPage from './pages/UserPage';
 import Layout from './components/Layout';
@@ -23,6 +24,7 @@ function App() {
             <Route path="/faction/armory" element={<FactionArmory />} />
             <Route path="/faction/funds" element={<FactionFunds />} />
             <Route path="/faction/past-wars" element={<PastWars />} />
+            <Route path="/faction/battle-stats" element={<FactionBattleStats />} />
             
             <Route path="/user" element={<UserPage />} />
             <Route path="/user/crimes" element={<UserCrimes />} />

@@ -312,3 +312,20 @@ export const getFactionMemberStats = async () => {
     return { members: [], configured: false };
   }
 };
+
+/**
+ * Fetch stat history for a single member from the backend.
+ * @param {number|string} player_id
+ * @returns {Promise<Array>} Array of { timestamp, strength, speed, defense, dexterity, total }
+ */
+export const getMemberHistory = async (player_id) => {
+  const endpoint = IS_LOCAL
+    ? `http://localhost:3000/api/get-member-history?player_id=${player_id}`
+    : `/api/get-member-history?player_id=${player_id}`;
+  try {
+    const response = await axios.get(endpoint);
+    return response.data?.history || [];
+  } catch {
+    return [];
+  }
+};

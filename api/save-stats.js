@@ -137,6 +137,53 @@ export default async function handler(req, res) {
       console.warn('[save-stats] sadd index warning:', await saddRes.text());
     }
 
+    // ── Append to history (for charts) ──────────────────────────────────────
+    // Only save a new history entry if the total has actually changed
+    const histKey = encodeURIComponent(`member-stats-history:${player_id}`);
+    try {
+      // Fetch existing history
+      const histGetRes = await fetch(`${REDIS_URL}/get/${histKey}`, {
+        headers: { 'Authorization': `Bearer ${REDIS_TOKEN}` }
+      });
+      const histGetData = await histGetRes.json();
+      let history = [];
+      if (histGetData.result) {
+        let parsed = histGetData.result;
+        let iters = 0;
+        while (typeof parsed === 'string' && iters < 4) {
+          try { parsed = JSON.parse(parsed); } catch { break; }
+          iters++;
+        }
+        if (Array.isArray(parsed)) history = parsed;
+      }
+
+      // Build snapshot
+      const snapshot = {
+        timestamp: record.lastUpdated,
+        strength:  record.stats.strength,
+        speed:     record.stats.speed,
+        defense:   record.stats.defense,
+        dexterity: record.stats.dexterity,
+        total:     record.stats.total,
+      };
+
+      // Only append if stats changed (or first save)
+      const last = history[history.length - 1];
+      if (!last || last.total !== snapshot.total) {
+        history.push(snapshot);
+        if (history.length > 100) history = history.slice(-100); // cap at 100 snapshots
+        const histValue = JSON.stringify(history);
+        await fetch(`${REDIS_URL}/set/${histKey}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(histValue)
+        });
+      }
+    } catch (histErr) {
+      console.warn('[save-stats] history write warning:', histErr.message);
+      // Non-fatal — main record was already saved
+    }
+
     return res.status(200).json({ success: true, player_id, lastUpdated: record.lastUpdated });
   } catch (e) {
     return res.status(500).json({ error: 'Internal server error', details: e.message });
