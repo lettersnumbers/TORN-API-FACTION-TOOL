@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Shield, User, Settings, Menu, X, Zap, ChevronLeft, ChevronRight, BarChart2 } from 'lucide-react';
+import { Shield, User, Settings, Menu, X, Zap, ChevronLeft, ChevronRight, BarChart2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
 import { fetchUserSpecific, fetchFactionData } from '../services/api';
 import './Layout.css';
@@ -12,7 +12,7 @@ const nameToColor = (name = '') => {
   return `hsl(${Math.abs(hash) % 360}, 70%, 55%)`;
 };
 
-// TCT Clock — Torn City Time is UTC
+// TCT Clock
 const TCTClock = ({ mini = false }) => {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -20,14 +20,12 @@ const TCTClock = ({ mini = false }) => {
     return () => clearInterval(t);
   }, []);
   const pad = (n) => String(n).padStart(2, '0');
-  if (mini) {
-    return (
-      <div className="tct-clock-mini">
-        {pad(time.getUTCHours())}:{pad(time.getUTCMinutes())}
-        <span style={{ fontSize: '0.5rem', opacity: 0.6, marginLeft: 2 }}>UTC</span>
-      </div>
-    );
-  }
+  if (mini) return (
+    <div className="tct-mini">
+      {pad(time.getUTCHours())}:{pad(time.getUTCMinutes())}
+      <span className="tct-mini-label">UTC</span>
+    </div>
+  );
   return (
     <div className="tct-clock">
       <div className="tct-clock-label">TCT // UTC</div>
@@ -38,18 +36,7 @@ const TCTClock = ({ mini = false }) => {
   );
 };
 
-// ── Collapsed tooltip wrapper ─────────────────────────────────────────────────
-const NavTooltip = ({ label, children, isCollapsed }) => {
-  if (!isCollapsed) return children;
-  return (
-    <div className="nav-tooltip-wrap">
-      {children}
-      <div className="nav-tooltip">{label}</div>
-    </div>
-  );
-};
-
-// ── Main Layout ──────────────────────────────────────────────────────────────
+// ── Layout ──────────────────────────────────────────────────────────────────
 const Layout = ({ children }) => {
   const location = useLocation();
   const { userName, factionName, hospitalCount, userHospitalStatus } = useDataContext();
@@ -59,18 +46,15 @@ const Layout = ({ children }) => {
     () => localStorage.getItem('tornSidebarCollapsed') === 'true'
   );
   const [topbarData, setTopbarData] = useState(null);
-
-  // Touch refs for swipe
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
 
-  // Close mobile nav on route change
+  // Close mobile drawer on route change
   useEffect(() => { setIsMobileOpen(false); }, [location.pathname]);
 
-  // Persist collapse
+  // Persist collapse state
   useEffect(() => {
     localStorage.setItem('tornSidebarCollapsed', String(isCollapsed));
-    document.documentElement.setAttribute('data-sidebar', isCollapsed ? 'collapsed' : 'expanded');
   }, [isCollapsed]);
 
   // Keyboard shortcuts
@@ -83,7 +67,7 @@ const Layout = ({ children }) => {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
-  // Swipe gesture
+  // Swipe to open/close on mobile
   const handleTouchStart = useCallback((e) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
@@ -93,12 +77,12 @@ const Layout = ({ children }) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
     if (dy > Math.abs(dx) * 1.2) { touchStartX.current = null; return; }
-    if (!isMobileOpen && touchStartX.current < 32 && dx > 60) setIsMobileOpen(true);
+    if (!isMobileOpen && touchStartX.current < 40 && dx > 60) setIsMobileOpen(true);
     else if (isMobileOpen && dx < -60) setIsMobileOpen(false);
     touchStartX.current = null;
   }, [isMobileOpen]);
 
-  // Topbar data (live bars + chain)
+  // Live topbar data
   useEffect(() => {
     let active = true;
     const fetch_ = async () => {
@@ -110,12 +94,8 @@ const Layout = ({ children }) => {
         if (!active) return;
         const b = uRes?.bars || uRes || {};
         setTopbarData({
-          name:   uRes?.name  || userName || 'Unknown',
-          life:   b.life,
-          energy: b.energy,
-          nerve:  b.nerve,
-          happy:  b.happy,
-          chain:  fRes?.chain || fRes?.basic?.chain || null,
+          life: b.life, energy: b.energy, nerve: b.nerve, happy: b.happy,
+          chain: fRes?.chain || fRes?.basic?.chain || null,
         });
       } catch {}
     };
@@ -125,20 +105,21 @@ const Layout = ({ children }) => {
   }, [userName]);
 
   // Derived
-  const baseIntensity = Math.min(0.05 + (hospitalCount * 0.02) + (userHospitalStatus * 0.4), 0.6);
-  const blurRadius    = Math.min(100 + (hospitalCount * 10) + (userHospitalStatus * 200), 500);
-  const layoutStyle   = (hospitalCount > 0 || userHospitalStatus > 0)
-    ? { boxShadow: `inset 0 0 ${blurRadius}px rgba(220, 38, 38, ${baseIntensity})`, transition: 'box-shadow 2s ease-in-out' }
+  const intensity = Math.min(0.05 + (hospitalCount * 0.02) + (userHospitalStatus * 0.4), 0.6);
+  const blur = Math.min(100 + (hospitalCount * 10) + (userHospitalStatus * 200), 500);
+  const layoutStyle = (hospitalCount > 0 || userHospitalStatus > 0)
+    ? { boxShadow: `inset 0 0 ${blur}px rgba(220,38,38,${intensity})`, transition: 'box-shadow 2s ease-in-out' }
     : { transition: 'box-shadow 2s ease-in-out' };
 
   const userInitials = (userName || 'U').slice(0, 2).toUpperCase();
-  const userColor    = nameToColor(userName || '');
-  const chainCount   = topbarData?.chain?.current || 0;
-  const chainActive  = chainCount > 0;
+  const userColor = nameToColor(userName || '');
+  const chainCount = topbarData?.chain?.current || 0;
+  const chainActive = chainCount > 0;
 
-  const isOnFaction = (ia) => ia || ['/', '/faction'].some(p => location.pathname === p || location.pathname.startsWith('/faction'));
-  const isOnUser    = (ia) => ia || location.pathname.startsWith('/user');
+  const isOnFaction = () => location.pathname === '/' || location.pathname.startsWith('/faction');
+  const isOnUser = () => location.pathname.startsWith('/user');
 
+  const toggleCollapse = () => setIsCollapsed(c => !c);
   const closeNav = () => setIsMobileOpen(false);
   const handleLogout = () => {
     import('../services/api').then(({ removeApiKey, removeFactionId }) => {
@@ -146,22 +127,28 @@ const Layout = ({ children }) => {
     });
   };
 
-  // ── Sub-nav items ────────────────────────────────────────────────────────
-  const factionSubItems = [
-    { to: '/',                   label: 'Roster',        end: true },
-    { to: '/faction/war-room',   label: 'War Room' },
-    { to: '/faction/attacks',    label: 'Attack Log' },
-    { to: '/faction/armory',     label: 'Armory' },
-    { to: '/faction/funds',      label: 'Faction Funds' },
-    { to: '/faction/past-wars',  label: 'Past Wars' },
+  const factionSubs = [
+    { to: '/', label: 'Roster', end: true },
+    { to: '/faction/war-room', label: 'War Room' },
+    { to: '/faction/attacks', label: 'Attack Log' },
+    { to: '/faction/armory', label: 'Armory' },
+    { to: '/faction/funds', label: 'Faction Funds' },
+    { to: '/faction/past-wars', label: 'Past Wars' },
     { to: '/faction/battle-stats', label: 'Battle Stats' },
   ];
-  const userSubItems = [
-    { to: '/user',              label: 'Profile & Vitals', end: true },
-    { to: '/user/crimes',       label: 'Crimes & Skill' },
-    { to: '/user/stats',        label: 'Personal Stats' },
-    { to: '/user/travel',       label: 'Flight & Travel' },
+  const userSubs = [
+    { to: '/user', label: 'Profile & Vitals', end: true },
+    { to: '/user/crimes', label: 'Crimes & Skill' },
+    { to: '/user/stats', label: 'Personal Stats' },
+    { to: '/user/travel', label: 'Flight & Travel' },
     { to: '/user/battle-stats', label: 'Battle Stats' },
+  ];
+
+  const BARS = [
+    { label: 'LIFE',   key: 'life',   color: '#3b82f6' },
+    { label: 'NRV',    key: 'nerve',  color: '#ef4444' },
+    { label: 'NRG',    key: 'energy', color: '#10b981' },
+    { label: 'HPS',    key: 'happy',  color: '#f59e0b' },
   ];
 
   return (
@@ -171,54 +158,73 @@ const Layout = ({ children }) => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Mobile top bar ──────────────────────────────────────────────── */}
-      <div className="mobile-header">
-        <button className="mobile-menu-btn" onClick={() => setIsMobileOpen(o => !o)} aria-label="Toggle menu">
-          {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
+      {/* ── Mobile top header ─────────────────────────────────────────── */}
+      <header className="mobile-header">
+        <button className="mobile-menu-btn" onClick={() => setIsMobileOpen(o => !o)} aria-label="Menu">
+          {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
-        <div className="mobile-header-brand">
-          <div className="logo-glow" style={{ width: 10, height: 10 }} />
-          <h2>TORN<span>TECH</span></h2>
+        <div className="mobile-brand">
+          <div className="logo-dot" />
+          <span className="mobile-brand-name">TORN<span>TECH</span></span>
+        </div>
+        {/* Mini bars on mobile header */}
+        <div className="mobile-bars">
+          {topbarData && BARS.map(b => {
+            const d = topbarData[b.key];
+            if (!d) return null;
+            const pct = d.maximum > 0 ? Math.min(100, (d.current / d.maximum) * 100) : 0;
+            return (
+              <div key={b.key} className="mobile-bar" title={`${b.label}: ${d.current}/${d.maximum}`}>
+                <div className="mobile-bar-track">
+                  <div className="mobile-bar-fill" style={{ width: `${pct}%`, background: b.color }} />
+                </div>
+                <span className="mobile-bar-label" style={{ color: b.color }}>{b.label}</span>
+              </div>
+            );
+          })}
         </div>
         <TCTClock mini />
-      </div>
+      </header>
 
       {/* Backdrop */}
-      {isMobileOpen && <div className="mobile-backdrop" onClick={closeNav} />}
+      {isMobileOpen && <div className="mobile-backdrop" onClick={closeNav} aria-hidden="true" />}
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ───────────────────────────────────────────────────── */}
       <aside className={`sidebar${isMobileOpen ? ' open' : ''}`} aria-label="Navigation">
+        {/* Header */}
         <div className="sidebar-header">
-          <div className="logo-glow" />
-          {!isCollapsed && <h2>TORN<span>TECH</span></h2>}
-          {/* Desktop collapse toggle (inline header) */}
+          <div className="logo-dot" style={{ width: 12, height: 12 }} />
+          {!isCollapsed && <h2 className="sidebar-title">TORN<span>TECH</span></h2>}
           <button
-            className="sidebar-collapse-btn"
-            onClick={() => setIsCollapsed(c => !c)}
-            title={isCollapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'}
+            className="collapse-toggle"
+            onClick={toggleCollapse}
+            title={isCollapsed ? 'Expand  (Ctrl+B)' : 'Collapse (Ctrl+B)'}
           >
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
           </button>
         </div>
 
-        <nav className="nav-menu" style={{ overflowY: 'auto', overflowX: 'hidden' }}>
-          {/* Faction section */}
-          <div className="nav-section">
-            {!isCollapsed && <div className="nav-section-label">Faction Ops</div>}
-            <NavTooltip label={factionName} isCollapsed={isCollapsed}>
+        {/* Nav */}
+        <nav className="sidebar-nav">
+
+          {/* Faction */}
+          <div className="nav-group">
+            {!isCollapsed && <div className="nav-group-label">Faction Ops</div>}
+            <div className={`nav-item-wrap${isCollapsed ? ' tooltip-wrap' : ''}`}>
               <NavLink
                 to="/"
                 onClick={closeNav}
-                className={({ isActive }) => isOnFaction(isActive) ? 'nav-item active' : 'nav-item'}
+                className={() => isOnFaction() ? 'nav-item active' : 'nav-item'}
                 title={isCollapsed ? factionName : undefined}
               >
-                <Shield size={18} />
-                {!isCollapsed && <span>{factionName}</span>}
+                <Shield size={17} className="nav-icon" />
+                {!isCollapsed && <span className="nav-label">{factionName}</span>}
               </NavLink>
-            </NavTooltip>
+              {isCollapsed && <div className="nav-tip">{factionName}</div>}
+            </div>
             {!isCollapsed && (
               <div className="sub-menu">
-                {factionSubItems.map(({ to, label, end }) => (
+                {factionSubs.map(({ to, label, end }) => (
                   <NavLink key={to} to={to} end={end} onClick={closeNav}
                     className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>
                     {label}
@@ -228,23 +234,24 @@ const Layout = ({ children }) => {
             )}
           </div>
 
-          {/* User section */}
-          <div className="nav-section">
-            {!isCollapsed && <div className="nav-section-label">Agent Profile</div>}
-            <NavTooltip label={userName} isCollapsed={isCollapsed}>
+          {/* User */}
+          <div className="nav-group">
+            {!isCollapsed && <div className="nav-group-label">Agent Profile</div>}
+            <div className={`nav-item-wrap${isCollapsed ? ' tooltip-wrap' : ''}`}>
               <NavLink
                 to="/user"
                 onClick={closeNav}
-                className={({ isActive }) => isOnUser(isActive) ? 'nav-item active' : 'nav-item'}
+                className={() => isOnUser() ? 'nav-item active' : 'nav-item'}
                 title={isCollapsed ? userName : undefined}
               >
-                <User size={18} />
-                {!isCollapsed && <span>{userName}</span>}
+                <User size={17} className="nav-icon" />
+                {!isCollapsed && <span className="nav-label">{userName}</span>}
               </NavLink>
-            </NavTooltip>
+              {isCollapsed && <div className="nav-tip">{userName}</div>}
+            </div>
             {!isCollapsed && (
               <div className="sub-menu">
-                {userSubItems.map(({ to, label, end }) => (
+                {userSubs.map(({ to, label, end }) => (
                   <NavLink key={to} to={to} end={end} onClick={closeNav}
                     className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>
                     {label}
@@ -254,115 +261,92 @@ const Layout = ({ children }) => {
             )}
           </div>
 
-          {/* Battle Stats shortcut (icon-only in collapsed) */}
+          {/* Battle Stats icon shortcut (collapsed only) */}
           {isCollapsed && (
-            <NavTooltip label="Battle Stats" isCollapsed>
+            <div className="nav-item-wrap tooltip-wrap">
               <NavLink to="/faction/battle-stats" onClick={closeNav}
                 className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
                 title="Battle Stats">
-                <BarChart2 size={18} />
+                <BarChart2 size={17} className="nav-icon" />
               </NavLink>
-            </NavTooltip>
+              <div className="nav-tip">Battle Stats</div>
+            </div>
           )}
         </nav>
 
+        {/* Footer */}
         <div className="sidebar-footer">
           {!isCollapsed && <TCTClock />}
-          {isCollapsed && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-              <TCTClock mini />
-            </div>
-          )}
+          {isCollapsed && <div className="collapsed-clock"><TCTClock mini /></div>}
           <button className="settings-btn" onClick={handleLogout}>
-            <Settings size={16} />
+            <Settings size={15} />
             {!isCollapsed && <span>Logout / Config</span>}
           </button>
         </div>
       </aside>
 
-      {/* ── Main content ─────────────────────────────────────────────────── */}
+      {/* ── Main ──────────────────────────────────────────────────────── */}
       <main className="main-content">
+        {/* Desktop topbar */}
         <header className="topbar">
-          {/* Desktop collapse toggle in topbar (icon) */}
-          <button
-            className="topbar-collapse-btn"
-            onClick={() => setIsCollapsed(c => !c)}
-            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <Menu size={18} />
+          {/* Collapse toggle */}
+          <button className="topbar-toggle" onClick={toggleCollapse} title="Toggle sidebar (Ctrl+B)">
+            {isCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
 
-          <div className="status-indicator">
+          <div className="topbar-status">
             <span className="pulse-dot" />
             <span className="status-text">Online</span>
           </div>
 
           {/* Stat bars */}
           <div className="topbar-bars">
-            {topbarData && [
-              { label: 'LIFE',   data: topbarData.life,   color: '#3b82f6' },
-              { label: 'ENERGY', data: topbarData.energy, color: '#10b981' },
-              { label: 'NERVE',  data: topbarData.nerve,  color: '#ef4444' },
-              { label: 'HAPPY',  data: topbarData.happy,  color: '#f59e0b' },
-            ].map(bar => {
-              if (!bar.data) return null;
-              const pct = bar.data.maximum > 0
-                ? Math.min(100, Math.max(0, (bar.data.current / bar.data.maximum) * 100)) : 0;
+            {topbarData && BARS.map(b => {
+              const d = topbarData[b.key];
+              if (!d) return null;
+              const pct = d.maximum > 0 ? Math.min(100, (d.current / d.maximum) * 100) : 0;
               return (
-                <div key={bar.label} className="topbar-bar-item">
-                  <div className="topbar-bar-label">
-                    <span>{bar.label}</span>
-                    <span className="topbar-bar-value" style={{ color: bar.color }}>
-                      {bar.data.current}<span className="topbar-bar-max">/{bar.data.maximum}</span>
+                <div key={b.key} className="bar-item">
+                  <div className="bar-header">
+                    <span className="bar-label">{b.label}</span>
+                    <span className="bar-value" style={{ color: b.color }}>
+                      {d.current}<span className="bar-max">/{d.maximum}</span>
                     </span>
                   </div>
-                  <div className="topbar-bar-track">
-                    <div className="topbar-bar-fill" style={{ width: `${pct}%`, background: bar.color, boxShadow: `0 0 8px ${bar.color}80` }} />
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${pct}%`, background: b.color, boxShadow: `0 0 6px ${b.color}80` }} />
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Chain */}
           {chainActive && (
-            <div className="chain-indicator">
-              <Zap size={11} style={{ color: '#f59e0b' }} />
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, gap: 1 }}>
-                <span className="chain-label">CHAIN</span>
-                <span className="chain-indicator-count">{chainCount.toLocaleString()}</span>
-              </div>
+            <div className="chain-pill">
+              <Zap size={11} />
+              <span className="chain-count">{chainCount.toLocaleString()}</span>
             </div>
           )}
 
-          {/* Avatar */}
-          <div className="topbar-avatar" style={{ background: userColor }}>
-            {userInitials}
-          </div>
+          <div className="topbar-avatar" style={{ background: userColor }}>{userInitials}</div>
         </header>
 
-        <div className="content-area">
-          {children}
-        </div>
+        <div className="content-area">{children}</div>
       </main>
 
-      {/* ── Mobile bottom nav (xs screens) ──────────────────────────────── */}
-      <nav className="mobile-bottom-nav" aria-label="Quick navigation">
-        <NavLink to="/" className={({ isActive }) => isOnFaction(isActive) ? 'bottom-nav-item active' : 'bottom-nav-item'}>
-          <Shield size={20} />
-          <span>Faction</span>
+      {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
+      <nav className="bottom-nav" aria-label="Quick nav">
+        <NavLink to="/" className={() => isOnFaction() ? 'bnav-item active' : 'bnav-item'} onClick={closeNav}>
+          <Shield size={20} /><span>Faction</span>
         </NavLink>
-        <NavLink to="/user" className={({ isActive }) => isOnUser(isActive) ? 'bottom-nav-item active' : 'bottom-nav-item'}>
-          <User size={20} />
-          <span>Profile</span>
+        <NavLink to="/user" className={() => isOnUser() ? 'bnav-item active' : 'bnav-item'} onClick={closeNav}>
+          <User size={20} /><span>Profile</span>
         </NavLink>
-        <NavLink to="/faction/battle-stats" className={({ isActive }) => isActive ? 'bottom-nav-item active' : 'bottom-nav-item'}>
-          <BarChart2 size={20} />
-          <span>Stats</span>
+        <NavLink to="/faction/battle-stats" className={({ isActive }) => isActive ? 'bnav-item active' : 'bnav-item'} onClick={closeNav}>
+          <BarChart2 size={20} /><span>Stats</span>
         </NavLink>
-        <button className="bottom-nav-item" onClick={handleLogout}>
-          <Settings size={20} />
-          <span>Config</span>
+        <button className="bnav-item" onClick={handleLogout}>
+          <Settings size={20} /><span>Config</span>
         </button>
       </nav>
     </div>
