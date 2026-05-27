@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  LineChart, Line, BarChart, Bar,
+  LineChart, Line, BarChart, Bar, LabelList, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ReferenceLine, Cell,
+  ResponsiveContainer, ReferenceLine,
 } from 'recharts';
 import {
   fetchFactionData, getFactionMemberStats, getMemberHistory,
@@ -151,31 +151,37 @@ const FactionBattleStats = () => {
     })),
   [selHistory]);
 
-  // ── Bar chart data (all members comparative) ─────────────────────────────
+  // ── Bar chart data (comparative, 30-day % change) ──────────────────────────
+  const THIRTY_DAYS_AGO = useMemo(() => Math.floor(Date.now() / 1000) - 30 * 86400, []);
+
   const barData = useMemo(() =>
     memberStats
       .filter(m => m.stats?.total)
       .sort((a, b) => (b.stats.total || 0) - (a.stats.total || 0))
       .map(m => {
-        const hist    = histories[m.player_id] || [];
-        const oldest  = hist[0];
-        const newest  = hist[hist.length - 1];
-        const pctGain = (oldest && newest && oldest.total && newest.total > oldest.total)
-          ? `+${Math.round(((newest.total - oldest.total) / oldest.total) * 100)}%`
-          : hist.length > 1 ? '—' : 'First';
+        const hist   = histories[m.player_id] || [];
+        const latest = hist[hist.length - 1];
+        // Snapshot at or before 30 days ago; fall back to oldest if none
+        const base   = [...hist].reverse().find(s => s.timestamp <= THIRTY_DAYS_AGO) || hist[0];
+        let pctChange = null;
+        let pctLabel  = hist.length > 1 ? '—' : 'NEW';
+        if (base && latest && base !== latest && base.total) {
+          pctChange = ((latest.total - base.total) / base.total) * 100;
+          pctLabel  = (pctChange >= 0 ? '+' : '') + pctChange.toFixed(1) + '%';
+        }
+        // Unique hue from name
+        let hue = 0;
+        for (let i = 0; i < m.name.length; i++) hue = m.name.charCodeAt(i) + ((hue << 5) - hue);
+        const color = `hsl(${Math.abs(hue) % 360}, 65%, 52%)`;
         return {
-          name:      m.name,
-          player_id: m.player_id,
-          strength:  m.stats.strength  || 0,
-          defense:   m.stats.defense   || 0,
-          speed:     m.stats.speed     || 0,
-          dexterity: m.stats.dexterity || 0,
-          total:     m.stats.total     || 0,
-          pctGain,
+          name: m.name, player_id: m.player_id,
+          total: m.stats.total || 0,
+          pctChange, pctLabel, color,
+          is30Day: !!hist.find(s => s.timestamp <= THIRTY_DAYS_AGO),
           saves: hist.length,
         };
       }),
-  [memberStats, histories]);
+  [memberStats, histories, THIRTY_DAYS_AGO]);
 
   // ── Share stats handler ──────────────────────────────────────────────────
   const handleShareStats = async () => {
@@ -463,7 +469,7 @@ const FactionBattleStats = () => {
             </div>
           )}
 
-          {/* ── Bar chart: comparative ────────────────────────────────────── */}
+          {/* ── Bar chart: comparative (1 bar per member, 30-day %) ─────────── */}
           {chartTab === 'bar' && (
             <div>
               {barData.length === 0 ? (
@@ -472,43 +478,81 @@ const FactionBattleStats = () => {
                 </div>
               ) : (
                 <>
-                  {/* Growth badges */}
-                  <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginBottom:20 }}>
-                    {barData.map(m => (
-                      <div key={m.player_id} style={{ padding:'6px 14px', background:'rgba(0,6,14,0.8)', border:'1px solid rgba(0,240,255,0.1)', borderRadius:8, display:'flex', alignItems:'center', gap:8 }}>
-                        <Avatar playerId={m.player_id} name={m.name} size={20} />
-                        <span style={{ fontFamily:'var(--font-heading)', fontSize:'0.7rem', color:'#e2e8f0', letterSpacing:'1px' }}>{m.name}</span>
-                        <span style={{ fontFamily:'Orbitron,monospace', fontSize:'0.65rem', color: m.pctGain?.startsWith('+') ? '#00ff88' : 'var(--text-muted)', fontWeight:700 }}>{m.pctGain}</span>
-                        <span style={{ fontSize:'0.55rem', color:'rgba(148,163,184,0.4)', letterSpacing:'1px' }}>{m.saves} save{m.saves!==1?'s':''}</span>
-                      </div>
-                    ))}
-                  </div>
-
                   <ResponsiveContainer width="100%" height={340}>
-                    <BarChart data={barData} margin={{ top:5, right:20, left:10, bottom:20 }}>
+                    <BarChart
+                      data={barData}
+                      margin={{ top: 28, right: 20, left: 10, bottom: 20 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                       <XAxis
                         dataKey="name"
                         tick={{ fill:'rgba(148,163,184,0.7)', fontSize:11, fontFamily:'var(--font-heading)' }}
                         axisLine={{ stroke:'rgba(255,255,255,0.08)' }}
                         tickLine={false}
-                        angle={-30}
+                        angle={-28}
                         textAnchor="end"
-                        height={50}
+                        height={52}
+                        interval={0}
                       />
                       <YAxis
                         tickFormatter={fmtM}
                         tick={{ fill:'rgba(148,163,184,0.6)', fontSize:11, fontFamily:'var(--font-heading)' }}
                         axisLine={false} tickLine={false} width={62}
-                        domain={[0, (dataMax) => Math.ceil(dataMax * 1.12)]}
+                        domain={[0, (dataMax) => Math.ceil(dataMax * 1.18)]}
                       />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Legend wrapperStyle={{ fontFamily:'var(--font-heading)', fontSize:'0.65rem', letterSpacing:'1px', paddingTop:8 }} />
-                      {STAT_CFG.slice(0,4).map(s => (
-                        <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[3,3,0,0]} maxBarSize={40} opacity={0.85} />
-                      ))}
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0]?.payload;
+                          const pctColor = d.pctChange === null ? 'rgba(148,163,184,0.6)'
+                            : d.pctChange > 0 ? '#00ff88'
+                            : d.pctChange < 0 ? '#ef4444'
+                            : 'rgba(148,163,184,0.6)';
+                          return (
+                            <div style={{ background:'rgba(0,6,14,0.97)', border:'1px solid rgba(0,240,255,0.2)', borderRadius:8, padding:'12px 16px', fontFamily:'var(--font-heading)', fontSize:'0.75rem', letterSpacing:'1px' }}>
+                              <div style={{ color:'#e2e8f0', marginBottom:8, fontSize:'0.8rem' }}>{d.name}</div>
+                              <div style={{ color:'var(--accent-primary)', fontFamily:'Orbitron,monospace', fontWeight:700, fontSize:'0.9rem', marginBottom:6 }}>{fmtM(d.total)} TOTAL</div>
+                              <div style={{ color: pctColor, fontSize:'0.7rem' }}>
+                                {d.pctChange !== null ? d.pctLabel : d.pctLabel} {d.is30Day ? '(30-day)' : d.saves > 1 ? '(all-time)' : '(first save)'}
+                              </div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="total" radius={[4,4,0,0]} maxBarSize={56}>
+                        {barData.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} fillOpacity={0.82} />
+                        ))}
+                        <LabelList
+                          content={(props) => {
+                            const { x, y, width, index } = props;
+                            const d = barData[index];
+                            if (!d) return null;
+                            const color = d.pctChange === null ? 'rgba(148,163,184,0.5)'
+                              : d.pctChange > 0 ? '#00ff88'
+                              : d.pctChange < 0 ? '#ef4444'
+                              : 'rgba(148,163,184,0.5)';
+                            return (
+                              <text
+                                x={(x || 0) + (width || 0) / 2}
+                                y={(y || 0) - 7}
+                                textAnchor="middle"
+                                fill={color}
+                                fontSize={10}
+                                fontFamily="Orbitron, monospace"
+                                fontWeight="700"
+                              >
+                                {d.pctLabel}
+                              </text>
+                            );
+                          }}
+                        />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
+                  <div style={{ textAlign:'center', marginTop:6, fontSize:'0.6rem', color:'rgba(148,163,184,0.3)', fontFamily:'var(--font-heading)', letterSpacing:'1px' }}>
+                    % CHANGE FROM 30-DAY-AGO SNAPSHOT · FALLS BACK TO EARLIEST SAVE IF &lt;30 DAYS OF DATA
+                  </div>
                 </>
               )}
             </div>
