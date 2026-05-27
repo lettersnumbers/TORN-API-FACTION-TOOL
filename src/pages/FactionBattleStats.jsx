@@ -263,7 +263,12 @@ const FactionBattleStats = () => {
           <table className="faction-table" style={{ minWidth: 720 }}>
             <thead>
               <tr>
-                <th style={{ width: 200 }}>AGENT</th>
+                <th style={{
+                  width: 200, minWidth: 180,
+                  position: 'sticky', left: 0, zIndex: 3,
+                  background: '#000c18',
+                  borderRight: '1px solid rgba(0,240,255,0.1)',
+                }}>AGENT</th>
                 {STAT_CFG.slice(0,4).map(s => (
                   <th key={s.key} style={{ color: s.color, textAlign:'right' }}>{s.label}</th>
                 ))}
@@ -293,8 +298,12 @@ const FactionBattleStats = () => {
                       outline: isSelected ? '1px solid rgba(0,240,255,0.15)' : undefined,
                     }}
                   >
-                    {/* Avatar + Name */}
-                    <td>
+                    {/* Avatar + Name — STICKY COLUMN */}
+                    <td style={{
+                       position: 'sticky', left: 0, zIndex: 2,
+                       background: isSelected ? '#001820' : '#00080e',
+                       borderRight: '1px solid rgba(0,240,255,0.08)',
+                    }}>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
                         <Avatar playerId={m.player_id} name={m.name} size={32} />
                         <div>
