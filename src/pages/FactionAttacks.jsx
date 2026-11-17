@@ -7,6 +7,7 @@ const FactionAttacks = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -23,7 +24,7 @@ const FactionAttacks = () => {
     };
     loadInfo();
     return () => { active = false; };
-  }, [factionName]);
+  }, [factionName, refreshKey]);
 
   const renderAttacks = () => {
     if (!data || !data.attacks) return <div className="text-center py-4">No complete attack logs available.</div>;
@@ -100,7 +101,7 @@ const FactionAttacks = () => {
           <h1>Attack Log :: <span className="accent-text">{factionName}</span></h1>
           <p>Recent worldwide faction combat history.</p>
         </div>
-        <button className="action-button small" onClick={() => window.location.reload()}>Refresh Feed</button>
+        <button className="action-button small" onClick={() => setRefreshKey(k => k + 1)}>Refresh Feed</button>
       </div>
 
       {error ? <div className="error-message">Error: {error}</div> : loading ? <div className="text-center py-4">Fetching combat logs...</div> : (

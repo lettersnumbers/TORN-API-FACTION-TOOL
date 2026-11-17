@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDataContext } from '../context/DataContext';
-import { fetchFactionWarData, fetchEnemyRoster, fetchUserData, fetchUserSpecific, fetchAnyUserSpecific, fetchFactionActiveWars, getFactionId } from '../services/api';
+import { fetchFactionWarData, fetchEnemyRoster, fetchUserData, fetchUserSpecific, fetchFactionActiveWars, getFactionId } from '../services/api';
 
 const StatusCell = ({ status, lastAction }) => {
   const stateStr = status?.details || status?.state || 'Okay';
@@ -53,6 +53,7 @@ const FactionWarRoom = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'score', direction: 'desc' });
   const [enemyFactionIds, setEnemyFactionIds] = useState([]);
   const [userVitals, setUserVitals] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   // Auto-refresh state
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -66,31 +67,6 @@ const FactionWarRoom = () => {
     }, refreshInterval);
     return () => clearInterval(intId);
   }, [autoRefresh, refreshInterval]);
-
-  useEffect(() => {
-    const styleEl = document.createElement('style');
-    styleEl.innerHTML = `
-      @keyframes attackPulse {
-        0% { box-shadow: 0 0 5px #10b981; }
-        50% { box-shadow: 0 0 20px #10b981, 0 0 10px #10b981 inset; }
-        100% { box-shadow: 0 0 5px #10b981; }
-      }
-    `;
-    document.head.appendChild(styleEl);
-
-    document.documentElement.style.setProperty('--accent-primary', '#ef4444');
-    document.documentElement.style.setProperty('--accent-secondary', '#94a3b8');
-    document.documentElement.style.setProperty('--accent-glow', 'rgba(239, 68, 68, 0.4)');
-    document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at center, #1a0505 0%, #02040a 100%)');
-
-    return () => {
-      document.head.removeChild(styleEl);
-      document.documentElement.style.setProperty('--accent-primary', '#00f0ff');
-      document.documentElement.style.setProperty('--accent-secondary', '#ff003c');
-      document.documentElement.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
-      document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top, #02101a 0%, #02040a 100%)');
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -201,7 +177,7 @@ const FactionWarRoom = () => {
     };
     loadInfo();
     return () => { active = false; };
-  }, [factionName, refreshTrigger]);
+  }, [factionName, refreshTrigger, refreshKey]);
 
   useEffect(() => {
     if (enemyFactionIds.length === 0) return;
@@ -228,7 +204,7 @@ const FactionWarRoom = () => {
              }
           }
        } catch (err) {
-          console.error("Error polling enemy status", err);
+          // polling error silenced
        }
     }, 30000);
     
@@ -277,11 +253,11 @@ const FactionWarRoom = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
         {Object.entries(locations).map(([dest, agents]) => (
-          <div key={dest} style={{ background: 'rgba(50, 205, 50, 0.05)', padding: '12px', borderLeft: '2px solid var(--accent-primary)', borderRadius: '0 4px 4px 0' }}>
-             <h4 style={{color: 'var(--accent-primary)', margin: '0 0 10px 0', fontSize: '0.95rem'}}>{dest.replace('In ', '').replace('Traveling to ', '')}</h4>
-             <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          <div key={dest} className="radar-location">
+             <h4>{dest.replace('In ', '').replace('Traveling to ', '')}</h4>
+             <ul>
                {agents.map(a => (
-                 <li key={a.id} style={{ marginBottom: '6px', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                 <li key={a.id}>
                    <span style={{ fontWeight: 500 }}>{a.name}</span>
                    <span className="text-muted">[{a.level}]</span>
                  </li>
@@ -296,8 +272,8 @@ const FactionWarRoom = () => {
   const renderAttackFeed = () => {
     if (!data || !data.attacks) return (
       <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
-        <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderBottom: '2px solid #f59e0b' }}>
-          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent War Attacks</h2>
+        <div className="war-panel-header-gold">
+          <h2>Recent War Attacks</h2>
         </div>
         <div className="text-center text-muted mt-4">No attack data available.</div>
       </div>
@@ -318,10 +294,10 @@ const FactionWarRoom = () => {
     
     return (
       <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderBottom: '2px solid #f59e0b' }}>
-          <h2 style={{color: '#f59e0b', textAlign: 'center'}}>Recent War Attacks</h2>
+        <div className="war-panel-header-gold">
+          <h2>Recent War Attacks</h2>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto', maxHeight: '750px' }}>
+        <div className="attack-feed-container">
           {attacksArray.length === 0 ? (
             <div className="text-center text-muted mt-4">No recent attacks recorded.</div>
           ) : (
@@ -355,12 +331,8 @@ const FactionWarRoom = () => {
               const timeNum = att.ended || att.started || att.timestamp_ended || att.timestamp_started;
               
               return (
-                <div key={att.id || att.code || (timeNum + '-' + attackerId)} style={{ 
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                  padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  backgroundColor: isWin ? 'rgba(16, 185, 129, 0.05)' : isLoss ? 'rgba(239, 68, 68, 0.05)' : 'transparent'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div key={att.id || att.code || (timeNum + '-' + attackerId)} className={`attack-feed-item ${isWin ? 'win' : isLoss ? 'loss' : ''}`}>
+                  <div className="attack-feed-detail">
                     <div style={{ fontSize: '0.95rem' }}>
                        <span style={{ fontWeight: isWeAttacked ? 'bold' : 'normal', color: isWeAttacked ? '#fff' : 'inherit' }}>{attackerName}</span>
                        <span className="text-muted" style={{ margin: '0 8px' }}>vs</span>
@@ -370,7 +342,7 @@ const FactionWarRoom = () => {
                       {timeNum ? new Date(timeNum * 1000).toLocaleTimeString() : 'Unknown'} - {att.result} {att.stealth ? '(Stealthed)' : ''}
                     </div>
                   </div>
-                  <div style={{ color, fontWeight: 'bold', fontSize: '1.15rem', textAlign: 'right' }}>
+                  <div className="attack-respect" style={{ color }}>
                     {respectStr}
                   </div>
                 </div>
@@ -458,8 +430,8 @@ const FactionWarRoom = () => {
     return (
       <div>
         <div style={{ backgroundColor: 'var(--panel-bg)', minHeight: '500px' }}>
-          <div style={{ padding: '16px', background: 'rgba(220, 38, 38, 0.1)', borderBottom: '2px solid var(--hp-nerve)' }}>
-            <h3 style={{ color: 'var(--hp-nerve)', margin: 0, textAlign: 'center', textTransform: 'uppercase' }}>
+          <div className="war-panel-header-red">
+            <h3>
               {enemyMembers.length > 0 ? enemyMembers[0].faction_name : 'Active Adversaries'}
             </h3>
           </div>
@@ -488,16 +460,14 @@ const FactionWarRoom = () => {
                   <tr key={m.id} style={{ color: rowColor }}>
                     <td>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                          <span style={{
-                            width: '10px', height: '10px', borderRadius: '50%',
-                            backgroundColor: m.last_action?.status === 'Online' ? '#10b981' : (m.last_action?.status === 'Idle' ? '#f59e0b' : 'transparent'),
-                            border: m.last_action?.status === 'Online' || m.last_action?.status === 'Idle' ? 'none' : '2px solid #64748b',
-                            boxShadow: m.last_action?.status === 'Online' ? '0 0 8px #10b981' : (m.last_action?.status === 'Idle' ? '0 0 8px #f59e0b' : 'none')
-                          }} title={m.last_action?.status || 'Offline'}></span>
+                          <span
+                            className={m.last_action?.status === 'Online' ? 'online-dot' : m.last_action?.status === 'Idle' ? 'idle-dot' : 'offline-dot'}
+                            title={m.last_action?.status || 'Offline'}
+                          ></span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div className="member-cell-stack">
                         <span style={{ fontWeight: 'bold' }}>{m.name}</span>
                         <a 
                           href={`https://www.torn.com/profiles.php?XID=${m.id}`} 
@@ -516,9 +486,9 @@ const FactionWarRoom = () => {
                     <td><StatusCell status={m.status} lastAction={m.last_action} /></td>
                     <td><TimeCell status={m.status} /></td>
                     <td>
-                      <div style={{ fontSize: '0.85rem', lineHeight: '1.2' }}>
-                        <div style={{ color: '#10b981', fontWeight: 'bold' }}>W: {m.wins}</div>
-                        <div style={{ color: '#ef4444', fontWeight: 'bold' }}>L: {m.losses}</div>
+                      <div className="wl-badge">
+                        <div><span className="win-count">W: {m.wins}</span></div>
+                        <div><span className="loss-count">L: {m.losses}</span></div>
                       </div>
                     </td>
                     <td>
@@ -526,13 +496,7 @@ const FactionWarRoom = () => {
                         href={`https://www.torn.com/page.php?sid=attack&user2ID=${m.id}`} 
                         target="_blank" 
                         rel="noopener noreferrer" 
-                        className="action-button small" 
-                        style={{ 
-                           padding: '6px 12px', fontSize: '0.75rem', textDecoration: 'none', 
-                           backgroundColor: isOkay ? '#10b981' : 'var(--hp-nerve)', 
-                           color: '#fff', border: 'none', display: 'inline-block',
-                           animation: isOkay ? 'attackPulse 1.5s infinite' : 'none'
-                        }}
+                        className={`attack-btn ${isOkay ? 'target-ok' : ''}`}
                       >
                         Attack
                       </a>
@@ -562,21 +526,13 @@ const FactionWarRoom = () => {
      const isApproaching = hitsRemaining > 0 && hitsRemaining <= 10;
      
      return (
-       <div className="glow-panel" style={{ 
-         padding: '10px 20px', 
-         display: 'flex', 
-         alignItems: 'center', 
-         gap: '24px', 
-         borderColor: 'var(--hp-nerve)',
-         margin: 0,
-         borderTop: '3px solid var(--hp-nerve)'
-       }}>
+       <div className="glow-panel chain-banner" style={{ borderColor: 'var(--hp-nerve)' }}>
          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <span style={{ color: 'var(--hp-nerve)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Active Chain</span>
             <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#fff' }}>{currentChain}</span>
          </div>
          
-         <div style={{ display: 'flex', flexDirection: 'column', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '24px' }}>
+         <div className="chain-banner-info">
             <div style={{ display: 'flex', gap: '20px', alignItems: 'baseline' }}>
                <span style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>
                   Next Bonus: <span style={{ color: 'var(--accent-primary)', fontWeight: 'bold' }}>{nextBonus}</span>
@@ -621,9 +577,9 @@ const FactionWarRoom = () => {
     );
 
     const medals = [
-      { color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)', icon: '🥇' },
-      { color: '#cbd5e1', bg: 'rgba(203, 213, 225, 0.1)', icon: '🥈' },
-      { color: '#b45309', bg: 'rgba(180, 83, 9, 0.15)', icon: '🥉' }
+      { color: '#fbbf24', icon: '🥇', cssClass: 'gold' },
+      { color: '#cbd5e1', icon: '🥈', cssClass: 'silver' },
+      { color: '#b45309', icon: '🥉', cssClass: 'bronze' }
     ];
 
     return (
@@ -635,11 +591,7 @@ const FactionWarRoom = () => {
           {topMembers.map((m, idx) => {
              const medal = medals[idx] || medals[2];
              return (
-               <div key={m.id || m.name} style={{
-                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                 padding: '8px 12px', background: medal.bg, borderRadius: '4px',
-                 borderLeft: `3px solid ${medal.color}`
-               }}>
+               <div key={m.id || m.name} className={`mvp-row ${['gold', 'silver', 'bronze'][idx] || 'bronze'}`}>
                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                    <span style={{ fontSize: '1.2rem' }}>{medal.icon}</span>
                    <span style={{ fontWeight: 'bold', fontSize: '0.95rem', color: '#fff' }}>{m.name}</span>
@@ -657,7 +609,7 @@ const FactionWarRoom = () => {
 
   return (
     <div className="page-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
+      <div className="page-header war-header">
         <div>
           <h1>War Room :: <span className="accent-text">{factionName}</span></h1>
           {warDetails ? (() => {
@@ -668,10 +620,10 @@ const FactionWarRoom = () => {
              const them = fList.find(f => parseInt(f.id) !== ourFid && f.name !== factionName);
              const target = warDetails.target || 0;
              return (
-               <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '4px' }}>
-                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Duration: <strong style={{ color: 'var(--accent-primary)' }}>{countdown || 'CALCULATING...'}</strong></span>
+               <div className="war-status-line">
+                 <span>Duration: <strong style={{ color: 'var(--accent-primary)' }}>{countdown || 'CALCULATING...'}</strong></span>
                  {target > 0 && (
-                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                   <span>
                      SCORE: <strong style={{ color: '#10b981' }}>{us?.score || 0}</strong> / <strong style={{ color: '#ef4444' }}>{them?.score || 0}</strong> <span style={{opacity: 0.7}}>(Target: {target})</span>
                    </span>
                  )}
@@ -685,8 +637,8 @@ const FactionWarRoom = () => {
           {renderChainMetrics()}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-          <button className="action-button small" onClick={() => setRefreshTrigger(prev => prev + 1)}>Refresh Feed</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <button className="action-button small" onClick={() => setRefreshKey(k => k + 1)}>Refresh Feed</button>
+          <div className="auto-refresh-controls">
             <input 
                type="checkbox" 
                id="autoRefresh" 
@@ -696,18 +648,10 @@ const FactionWarRoom = () => {
             />
             <label htmlFor="autoRefresh" style={{ cursor: 'pointer', margin: 0 }}>Auto-Refresh</label>
             <select 
+               className="auto-refresh-select"
                value={refreshInterval} 
                onChange={(e) => setRefreshInterval(Number(e.target.value))}
                disabled={!autoRefresh}
-               style={{ 
-                 background: 'rgba(0,0,0,0.5)', 
-                 color: '#fff', 
-                 border: '1px solid var(--border-color)', 
-                 borderRadius: '3px',
-                 fontSize: '0.75rem',
-                 padding: '2px 4px',
-                 cursor: autoRefresh ? 'pointer' : 'not-allowed'
-               }}
             >
                <option value={30000}>30s</option>
                <option value={60000}>1m</option>
@@ -720,16 +664,16 @@ const FactionWarRoom = () => {
       
       {error ? <div className="error-message">Error: {error}</div> : loading ? <div className="text-center py-4">Synchronizing Telemetry...</div> : (
         <>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div className="war-layout">
             {/* Main Content Pane */}
-            <div style={{ flex: 1, minWidth: '300px', overflowX: 'auto' }}>
+            <div className="war-main-pane">
               <div className="data-table-container glow-panel overflow-hidden">
                 {renderSplitRoster()}
               </div>
             </div>
             
             {/* Right Sidebar */}
-            <div style={{ flex: '0 0 330px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="war-sidebar">
               {renderMVPs()}
               {renderAttackFeed()}
             </div>

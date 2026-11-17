@@ -7,6 +7,7 @@ const PastWars = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [wars, setWars] = useState([]);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const [expandedWarId, setExpandedWarId] = useState(null);
   const [reportData, setReportData] = useState({});
@@ -26,7 +27,7 @@ const PastWars = () => {
         const report = await fetchRankedWarReport(warId);
         setReportData(prev => ({ ...prev, [warId]: report.rankedwarreport || report }));
      } catch (err) {
-        console.error("Failed to load report", err);
+        // failed to load report
      } finally {
         setLoadingReport(false);
      }
@@ -49,17 +50,17 @@ const PastWars = () => {
         if (!fac || !fac.members) return null;
         const members = Object.values(fac.members).sort((a,b) => b.score - a.score);
         return (
-           <div style={{ flex: 1, minWidth: '300px' }}>
-              <h4 style={{ color: isUs ? 'var(--accent-primary)' : 'var(--hp-nerve)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '8px', marginBottom: '12px', fontSize: '1rem' }}>
+           <div className="war-detail-faction">
+              <h4 style={{ color: isUs ? 'var(--accent-primary)' : 'var(--hp-nerve)' }}>
                  {fac.name} Roster
               </h4>
-              <table className="data-table" style={{ fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)' }}>
+              <table className="data-table">
                  <thead>
                     <tr>
-                       <th style={{ background: 'transparent' }}>Member</th>
-                       <th style={{ textAlign: 'right', background: 'transparent' }}>Score</th>
-                       <th style={{ textAlign: 'right', background: 'transparent' }}>Attacks</th>
-                       <th style={{ textAlign: 'right', background: 'transparent' }}>Score %</th>
+                       <th>Member</th>
+                       <th style={{ textAlign: 'right' }}>Score</th>
+                       <th style={{ textAlign: 'right' }}>Attacks</th>
+                       <th style={{ textAlign: 'right' }}>Score %</th>
                     </tr>
                  </thead>
                  <tbody>
@@ -81,28 +82,14 @@ const PastWars = () => {
      };
 
      return (
-       <div className="p-3" style={{ background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)' }}>
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+       <div className="war-detail-panel">
+          <div className="war-detail-split">
              {renderFactionTable(usData, true)}
              {renderFactionTable(themData, false)}
           </div>
        </div>
      );
   };
-  
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent-primary', '#ef4444');
-    document.documentElement.style.setProperty('--accent-secondary', '#94a3b8');
-    document.documentElement.style.setProperty('--accent-glow', 'rgba(239, 68, 68, 0.4)');
-    document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top right, #1a0505 0%, #02040a 100%)');
-
-    return () => {
-      document.documentElement.style.setProperty('--accent-primary', '#00f0ff');
-      document.documentElement.style.setProperty('--accent-secondary', '#ff003c');
-      document.documentElement.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
-      document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top, #02101a 0%, #02040a 100%)');
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -123,7 +110,7 @@ const PastWars = () => {
     };
     loadInfo();
     return () => { active = false; };
-  }, [factionName]);
+  }, [factionName, refreshKey]);
 
   const ourFactionId = parseInt(getFactionId()) || 0;
 
@@ -134,7 +121,7 @@ const PastWars = () => {
           <h1>Historical Archive :: <span className="accent-text">Ranked Wars</span></h1>
           <p>Analyzing the past 20 recorded Ranked War operations.</p>
         </div>
-        <button className="action-button small" onClick={() => window.location.reload()}>Refresh History</button>
+        <button className="action-button small" onClick={() => setRefreshKey(k => k + 1)}>Refresh History</button>
       </div>
 
       {error ? (

@@ -10,7 +10,7 @@ const ArmoryGrid = ({ title, itemsArray }) => {
         <h2>{title}</h2>
       </div>
       <div className="table-responsive" style={{ padding: '24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+        <div className="armory-grid">
           {itemsArray.map((item, idx) => (
             <div key={idx} className="metric-card" style={{ padding: '16px', marginBottom: 0 }}>
               <h3 style={{ fontSize: '0.85rem', marginBottom: '8px', color: 'var(--text-main)' }}>{item.name}</h3>
@@ -32,24 +32,11 @@ const FactionArmory = () => {
   const [usageData, setUsageData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // View toggle: 'vault' | 'usage'
   const [viewMode, setViewMode] = useState('vault');
   const [loans, setLoans] = useState([]);
-  
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent-primary', '#cbd5e1'); // Silver
-    document.documentElement.style.setProperty('--accent-secondary', '#f59e0b'); // Brass
-    document.documentElement.style.setProperty('--accent-glow', 'rgba(203, 213, 225, 0.2)');
-    document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top left, #0a0d14 0%, #02040a 100%)');
-
-    return () => {
-      document.documentElement.style.setProperty('--accent-primary', '#00f0ff');
-      document.documentElement.style.setProperty('--accent-secondary', '#ff003c');
-      document.documentElement.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
-      document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top, #02101a 0%, #02040a 100%)');
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -73,7 +60,7 @@ const FactionArmory = () => {
     };
     loadInfo();
     return () => { active = false; };
-  }, []);
+  }, [refreshKey]);
 
   const buildUsageTable = (armory, news, members) => {
     const map = {};
@@ -228,15 +215,15 @@ const FactionArmory = () => {
           <h1>Armory :: <span className="accent-text">{factionName}</span></h1>
           <p>Financials, Medical Supplies, and Contraband.</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="view-toggle-group">
           <button className={`action-button small ${viewMode === 'vault' ? 'active' : 'outline'}`} onClick={() => setViewMode('vault')}>Vault Inventory</button>
           <button className={`action-button small ${viewMode === 'usage' ? 'active' : 'outline'}`} onClick={() => setViewMode('usage')}>Member Usage</button>
-          <button className="action-button small outline" onClick={() => window.location.reload()}>Refresh</button>
+          <button className="action-button small outline" onClick={() => setRefreshKey(k => k + 1)}>Refresh</button>
         </div>
       </div>
 
       {error ? (
-        <div className="glow-panel p-4 text-center mt-4">
+        <div className="access-denied-panel glow-panel p-4">
           <h2 style={{color: 'var(--hp-nerve)', marginBottom: '16px'}}>Access Denied</h2>
           <p className="text-muted">Your API Key does not have the required faction permissions to view the Armory.</p>
           <div style={{fontSize: '0.85rem', marginTop: '8px'}}>{error}</div>

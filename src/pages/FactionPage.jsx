@@ -1,32 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchFactionData, getApiKey, setApiKey, getFactionId, setFactionId } from '../services/api';
 import { useDataContext } from '../context/DataContext';
 import ExpandedMemberRow from '../components/ExpandedMemberRow';
+import Avatar from '../components/Avatar';
 import './FactionPage.css';
-
-const MemberAvatar = ({ playerId, name }) => {
-  const [imgError, setImgError] = useState(false);
-  const color = (() => {
-    let h = 0;
-    for (let i = 0; i < (name || '').length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
-    return `hsl(${Math.abs(h) % 360}, 60%, 45%)`;
-  })();
-  const initials = (name || 'U').slice(0, 2).toUpperCase();
-  if (imgError || !playerId) {
-    return (
-      <div className="avatar-initials" style={{ background: color }}>{initials}</div>
-    );
-  }
-  return (
-    <img
-      src={`https://avatars.torn.com/avatars/${playerId}_small.jpg`}
-      alt={name}
-      className="avatar-thumb"
-      onError={() => setImgError(true)}
-      loading="lazy"
-    />
-  );
-};
 
 const FactionPage = () => {
   const { setFactionName, setHospitalCount } = useDataContext();
@@ -43,20 +21,6 @@ const FactionPage = () => {
   const [expandedUser, setExpandedUser] = useState(null);
   const [userStatsLoading, setUserStatsLoading] = useState({});
   const [userStatsData, setUserStatsData] = useState({});
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent-primary', '#a855f7');
-    document.documentElement.style.setProperty('--accent-secondary', '#d946ef');
-    document.documentElement.style.setProperty('--accent-glow', 'rgba(168, 85, 247, 0.4)');
-    document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top, #10051a 0%, #02040a 100%)');
-
-    return () => {
-      document.documentElement.style.setProperty('--accent-primary', '#00f0ff');
-      document.documentElement.style.setProperty('--accent-secondary', '#ff003c');
-      document.documentElement.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
-      document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top, #02101a 0%, #02040a 100%)');
-    };
-  }, []);
 
   const toggleRow = (id) => {
     const newExpanded = new Set(expandedRows);
@@ -79,7 +43,6 @@ const FactionPage = () => {
     setError(null);
     try {
       const data = await fetchFactionData(factionId);
-      console.log('Faction Data:', data);
       setFaction(data.faction || data); // handle whether unnested or nested
       
       if (data.name) {
@@ -187,18 +150,18 @@ const FactionPage = () => {
   return (
     <div className="page-container">
       <div className="page-header d-flex-between" style={{ alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <div className="faction-header-flex">
           {faction?.tag_image && (
             <img 
               src={`https://factiontags.torn.com/${faction.tag_image}`} 
               alt="Faction Tag" 
-              style={{ width: '64px', height: '64px', borderRadius: '8px', border: '2px solid var(--border-color)', objectFit: 'cover' }}
+              className="faction-tag-img"
             />
           )}
           <div>
             <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span className="accent-text">{faction?.name || 'Loading...'}</span> 
-              {faction?.tag && <span style={{ fontSize: '1rem', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>[{faction.tag}]</span>}
+              {faction?.tag && <span className="faction-tag-badge">[{faction.tag}]</span>}
             </h1>
             <p className="mt-2 text-muted" style={{ fontSize: '0.9rem' }}>
               Leader: {leader?.name || faction?.leader_id || 'N/A'} | Co-Leader: {coLeader?.name || faction?.co_leader_id || 'N/A'}
@@ -273,11 +236,11 @@ const FactionPage = () => {
                         style={{ cursor: 'pointer' }}
                       >
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div className="member-cell-stack">
                             <div className="member-name">
                               <span className={`status-dot ${member.status?.state === 'Online' ? 'online' : member.status?.state === 'Idle' ? 'idle' : 'offline'}`}></span>
-                              <MemberAvatar playerId={member.id} name={member.name} />
-                              <span style={{color: isExpanded ? 'var(--accent-primary)' : 'inherit', transition: 'color 0.2s', fontWeight: isExpanded ? 'bold' : 'normal'}}>{member.name}</span> 
+                              <Avatar playerId={member.id} name={member.name} size={28} />
+                              <span className={isExpanded ? 'member-name-expanded' : ''}>{member.name}</span> 
                             </div>
                             <a 
                               href={`https://www.torn.com/profiles.php?XID=${member.id}`} 
@@ -317,14 +280,12 @@ const FactionPage = () => {
       </div>
 
       {/* Battle Stats → moved to its own page */}
-      <div style={{ marginTop: 24, padding: '16px 24px', background: 'rgba(0,240,255,0.03)', border: '1px solid rgba(0,240,255,0.1)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <div className="battle-stats-cta">
         <div>
-          <div style={{ fontFamily: 'var(--font-heading)', fontSize: '0.8rem', letterSpacing: '2px', color: 'var(--accent-primary)', marginBottom: 4 }}>MEMBER BATTLE STATS</div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>View gym stats, growth charts, and faction comparison</div>
+          <div className="battle-stats-cta-label">MEMBER BATTLE STATS</div>
+          <div className="text-muted text-sm">View gym stats, growth charts, and faction comparison</div>
         </div>
-        <a href="/faction/battle-stats" style={{ padding: '8px 20px', background: 'rgba(0,240,255,0.08)', border: '1px solid rgba(0,240,255,0.25)', borderRadius: 8, color: 'var(--accent-primary)', fontFamily: 'var(--font-heading)', fontSize: '0.7rem', letterSpacing: '2px', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>
-          VIEW STATS →
-        </a>
+        <Link to="/faction/battle-stats" className="battle-stats-cta-link">VIEW STATS →</Link>
       </div>
     </div>
   );

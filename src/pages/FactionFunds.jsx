@@ -8,24 +8,11 @@ const FactionFunds = () => {
   const [error, setError] = useState(null);
   const [fundsData, setFundsData] = useState([]);
   const [factionBank, setFactionBank] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   
   const [sortConfig, setSortConfig] = useState({ key: 'balance', direction: 'descending' });
   const [expandedRow, setExpandedRow] = useState(null);
   const [timeFilter, setTimeFilter] = useState(30 * 86400); // Default 30 days
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent-primary', '#10b981');
-    document.documentElement.style.setProperty('--accent-secondary', '#f59e0b');
-    document.documentElement.style.setProperty('--accent-glow', 'rgba(16, 185, 129, 0.4)');
-    document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top right, #05140a 0%, #02040a 100%)');
-
-    return () => {
-      document.documentElement.style.setProperty('--accent-primary', '#00f0ff');
-      document.documentElement.style.setProperty('--accent-secondary', '#ff003c');
-      document.documentElement.style.setProperty('--accent-glow', 'rgba(0, 240, 255, 0.4)');
-      document.documentElement.style.setProperty('--bg-main', 'radial-gradient(circle at top, #02101a 0%, #02040a 100%)');
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -53,7 +40,7 @@ const FactionFunds = () => {
     };
     loadInfo();
     return () => { active = false; };
-  }, [timeFilter]); // Re-run when the time filter directly changes
+  }, [timeFilter, refreshKey]);
 
   const buildFundsTable = (deposits, payouts, members, balRes, timeFilterValue) => {
     const map = {};
@@ -219,11 +206,11 @@ const FactionFunds = () => {
           <h1>Faction Funds :: <span className="accent-text">{factionName}</span></h1>
           <p>Vault balance tracker and 30-day member payout ledger.</p>
         </div>
-        <button className="action-button small" onClick={() => window.location.reload()}>Refresh Ledger</button>
+        <button className="action-button small" onClick={() => setRefreshKey(k => k + 1)}>Refresh Ledger</button>
       </div>
 
       {error ? (
-        <div className="glow-panel p-4 text-center mt-4">
+        <div className="access-denied-panel glow-panel p-4">
           <h2 style={{color: 'var(--hp-nerve)', marginBottom: '16px'}}>Access Denied</h2>
           <p className="text-muted">Your API Key does not have the required permissions to view the Faction Vault.</p>
           <div style={{fontSize: '0.85rem', marginTop: '8px'}}>{error}</div>
@@ -259,7 +246,7 @@ const FactionFunds = () => {
                  <span className="pulse-dot" style={{ backgroundColor: 'var(--accent-primary)' }}></span>
                  Faction Ledger
                </h2>
-               <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.4)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+               <div className="time-filter-bar">
                  {[
                    { label: '1 Day', val: 86400 },
                    { label: '1 Week', val: 7 * 86400 },
@@ -270,13 +257,7 @@ const FactionFunds = () => {
                    <button 
                      key={opt.label}
                      onClick={() => setTimeFilter(opt.val)}
-                     style={{
-                       background: timeFilter === opt.val ? 'var(--accent-primary)' : 'transparent',
-                       color: timeFilter === opt.val ? '#000' : 'var(--text-muted)',
-                       border: 'none', padding: '6px 14px', borderRadius: '6px', 
-                       fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s',
-                       textTransform: 'uppercase', letterSpacing: '0.5px'
-                     }}
+                     className={`time-filter-btn ${timeFilter === opt.val ? 'active' : ''}`}
                    >
                      {opt.label}
                    </button>
@@ -319,24 +300,24 @@ const FactionFunds = () => {
                        </tr>
                        {isExpanded && (
                          <tr>
-                            <td colSpan="4" style={{ padding: 0, backgroundColor: 'rgba(0,0,0,0.4)', borderBottom: '1px solid var(--border-color)' }}>
-                               <div style={{ padding: '16px', maxHeight: '400px', overflowY: 'auto' }}>
+                            <td colSpan="4" className="funds-expand-row">
+                               <div className="funds-history-panel">
                                   <h4 style={{ color: 'var(--text-main)', marginTop: 0, marginBottom: '12px' }}>30-Day Ledger History</h4>
                                   {u.history.length === 0 ? (
                                      <div className="text-muted text-sm">No transaction records found matching this member's aliases.</div>
                                   ) : (
-                                     <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+                                     <table className="ledger-table">
                                         <tbody>
                                            {u.history.sort((a,b) => b.time - a.time).map((log, i) => {
                                               const date = new Date(log.time * 1000).toLocaleString();
                                               const isDep = log.type === 'deposit';
                                               return (
-                                                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                                                   <td style={{ padding: '6px 0', color: 'var(--text-muted)' }}>{date}</td>
-                                                   <td style={{ padding: '6px 0', color: isDep ? 'var(--accent-primary)' : 'var(--hp-life)', fontWeight: 'bold', minWidth: '100px' }}>
+                                                <tr key={i} className="ledger-entry">
+                                                   <td className="ledger-date">{date}</td>
+                                                   <td className={isDep ? 'ledger-amount-deposit' : 'ledger-amount-withdrawal'}>
                                                       {isDep ? '+' : '-'}${log.amount.toLocaleString()}
                                                    </td>
-                                                   <td style={{ padding: '6px 0', color: 'var(--text-main)' }}>{log.text}</td>
+                                                   <td className="ledger-text">{log.text}</td>
                                                 </tr>
                                               );
                                            })}

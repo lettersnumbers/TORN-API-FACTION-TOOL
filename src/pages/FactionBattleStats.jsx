@@ -9,6 +9,7 @@ import {
   getApiKey, getFactionId, fetchUserSpecific, saveUserStats, fetchUserData,
 } from '../services/api';
 import { useDataContext } from '../context/DataContext';
+import Avatar from '../components/Avatar';
 import './FactionPage.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -31,17 +32,6 @@ const staleness = (ts) => {
   if (days < 3)  return { label: `${days}d ago`, cls: 'fresh' };
   if (days < 14) return { label: `${days}d ago`, cls: 'stale' };
   return { label: `${days}d ago`, cls: 'old' };
-};
-
-// ─── Avatar ──────────────────────────────────────────────────────────────────
-const Avatar = ({ playerId, name, size = 32 }) => {
-  const [err, setErr] = useState(false);
-  const color = (() => { let h = 0; for (let i = 0; i < (name||'').length; i++) h = name.charCodeAt(i) + ((h<<5)-h); return `hsl(${Math.abs(h)%360},60%,45%)`; })();
-  const init  = (name||'?').slice(0,2).toUpperCase();
-  if (err || !playerId) return (
-    <div style={{ width:size, height:size, borderRadius:'50%', background:color, border:'1px solid rgba(0,240,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:size*0.35, fontFamily:'var(--font-heading)', fontWeight:700, color:'#fff', flexShrink:0 }}>{init}</div>
-  );
-  return <img src={`https://avatars.torn.com/avatars/${playerId}_small.jpg`} alt={name} onError={()=>setErr(true)} style={{ width:size, height:size, borderRadius:'50%', objectFit:'cover', border:'1px solid rgba(0,240,255,0.25)', flexShrink:0 }} loading="lazy" />;
 };
 
 // ─── Custom tooltip ───────────────────────────────────────────────────────────
@@ -267,7 +257,7 @@ const FactionBattleStats = () => {
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="page-header d-flex-between" style={{ marginBottom: 24 }}>
+      <div className="page-header d-flex-between mb-4">
         <div>
           <h1>Battle Stats :: <span className="accent-text">{factionName}</span></h1>
           <p style={{ color:'var(--text-muted)', marginTop:4, fontSize:'0.85rem' }}>
@@ -308,20 +298,7 @@ const FactionBattleStats = () => {
           <button
             onClick={exportCsv}
             disabled={merged.length === 0}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px',
-              background: 'rgba(0,240,255,0.06)',
-              border: '1px solid rgba(0,240,255,0.22)',
-              borderRadius: 8,
-              color: 'var(--accent-primary)',
-              fontFamily: 'var(--font-heading)',
-              fontSize: '0.65rem', letterSpacing: '2px', textTransform: 'uppercase',
-              cursor: 'pointer', transition: 'all 0.2s',
-              flexShrink: 0,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background='rgba(0,240,255,0.13)'; e.currentTarget.style.boxShadow='0 0 14px rgba(0,240,255,0.15)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background='rgba(0,240,255,0.06)'; e.currentTarget.style.boxShadow='none'; }}
+            className="csv-export-btn"
             title="Download table as CSV"
           >
             ⬇ CSV
@@ -332,12 +309,7 @@ const FactionBattleStats = () => {
           <table className="faction-table" style={{ minWidth: 720 }}>
             <thead>
               <tr>
-                <th style={{
-                  width: 200, minWidth: 180,
-                  position: 'sticky', left: 0, zIndex: 3,
-                  background: '#000c18',
-                  borderRight: '1px solid rgba(0,240,255,0.1)',
-                }}>AGENT</th>
+                <th className="sticky-col-header">AGENT</th>
                 {STAT_CFG.slice(0,4).map(s => (
                   <th key={s.key} style={{ color: s.color, textAlign:'right' }}>{s.label}</th>
                 ))}
@@ -368,36 +340,32 @@ const FactionBattleStats = () => {
                     }}
                   >
                     {/* Avatar + Name — STICKY COLUMN */}
-                    <td style={{
-                       position: 'sticky', left: 0, zIndex: 2,
-                       background: isSelected ? '#001820' : '#00080e',
-                       borderRight: '1px solid rgba(0,240,255,0.08)',
-                    }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <td className={`sticky-col ${isSelected ? 'selected' : ''}`}>
+                      <div className="agent-cell">
                         <Avatar playerId={m.player_id} name={m.name} size={32} />
                         <div>
-                          <div style={{ fontFamily:'var(--font-heading)', fontSize:'0.85rem', letterSpacing:'1px', color:'#e2e8f0' }}>
+                          <div className="agent-name">
                             {m.name}
-                            {isMe && <span style={{ marginLeft:6, fontSize:'0.55rem', padding:'1px 5px', background:'rgba(0,240,255,0.1)', border:'1px solid rgba(0,240,255,0.25)', borderRadius:8, color:'var(--accent-primary)', letterSpacing:'1px' }}>YOU</span>}
+                            {isMe && <span className="you-badge">YOU</span>}
                           </div>
-                          <div style={{ fontSize:'0.65rem', color:'var(--text-muted)' }}>Lv.{m.level} · {m.position}</div>
+                          <div className="agent-meta">Lv.{m.level} · {m.position}</div>
                         </div>
                       </div>
                     </td>
 
                     {/* Stats or empty */}
                     {STAT_CFG.slice(0,4).map(s => (
-                      <td key={s.key} style={{ textAlign:'right', fontFamily:'Orbitron,monospace', fontSize:'0.8rem', color: ss ? s.color : 'var(--text-muted)' }}>
+                      <td key={s.key} className="stat-value" style={{ color: ss ? s.color : 'var(--text-muted)' }}>
                         {ss ? fmtM(ss[s.key]) : '—'}
                       </td>
                     ))}
-                    <td style={{ textAlign:'right', fontFamily:'Orbitron,monospace', fontSize:'0.9rem', fontWeight:700, color: ss ? 'var(--accent-primary)' : 'var(--text-muted)' }}>
+                    <td className="stat-value highlight" style={{ color: ss ? undefined : 'var(--text-muted)' }}>
                       {ss ? fmtM(ss.total) : (
                         isMe
-                          ? <button onClick={handleShareStats} disabled={shareStatus==='sharing'} style={{ fontSize:'0.6rem', padding:'3px 10px', background:'rgba(0,240,255,0.07)', border:'1px solid rgba(0,240,255,0.2)', borderRadius:8, color:'var(--accent-primary)', fontFamily:'var(--font-heading)', letterSpacing:'1px', cursor:'pointer' }}>
+                          ? <button onClick={handleShareStats} disabled={shareStatus==='sharing'} className="mini-share-btn">
                               ↗ SHARE
                             </button>
-                          : <span style={{ fontSize:'0.7rem', color:'rgba(148,163,184,0.35)', fontFamily:'var(--font-heading)', letterSpacing:'1px' }}>NOT SHARED</span>
+                          : <span className="not-shared-label">NOT SHARED</span>
                       )}
                     </td>
 
@@ -442,14 +410,8 @@ const FactionBattleStats = () => {
               <button
                 key={tab}
                 onClick={(e) => { e.stopPropagation(); setChartTab(tab); }}
-                style={{
-                  fontSize:'0.65rem', padding:'4px 14px',
-                  background: chartTab===tab ? 'rgba(0,240,255,0.12)' : 'rgba(0,240,255,0.03)',
-                  border:`1px solid rgba(0,240,255,${chartTab===tab?'0.35':'0.1'})`,
-                  borderRadius:8, color: chartTab===tab ? 'var(--accent-primary)' : 'var(--text-muted)',
-                  fontFamily:'var(--font-heading)', letterSpacing:'1px', cursor:'pointer', transition:'all 0.2s',
-                  pointerEvents: 'all',
-                }}
+                className={`chart-tab-btn ${chartTab===tab ? 'active' : ''}`}
+                style={{ pointerEvents: 'all' }}
               >{lbl}</button>
             ))}
           </div>
@@ -461,7 +423,7 @@ const FactionBattleStats = () => {
           {chartTab === 'line' && (
             <div>
               {!selMember ? (
-                <div style={{ textAlign:'center', padding:'48px 24px', color:'var(--text-muted)', fontFamily:'var(--font-heading)', letterSpacing:'2px', fontSize:'0.75rem' }}>
+                <div className="chart-empty-hint">
                   ▼ SELECT A MEMBER FROM THE TABLE ABOVE TO VIEW THEIR STAT GROWTH
                 </div>
               ) : (
@@ -481,12 +443,11 @@ const FactionBattleStats = () => {
                       <button
                         key={s.key}
                         onClick={() => toggleStat(s.key)}
+                        className={`stat-toggle ${visibleStats[s.key] ? 'active' : ''}`}
                         style={{
-                          fontSize:'0.6rem', padding:'4px 12px', borderRadius:16, cursor:'pointer',
-                          fontFamily:'var(--font-heading)', letterSpacing:'1.5px', transition:'all 0.2s',
-                          background: visibleStats[s.key] ? `${s.color}20` : 'rgba(255,255,255,0.03)',
-                          border:`1px solid ${visibleStats[s.key] ? s.color : 'rgba(255,255,255,0.08)'}`,
-                          color: visibleStats[s.key] ? s.color : 'var(--text-muted)',
+                          background: visibleStats[s.key] ? `${s.color}20` : undefined,
+                          borderColor: visibleStats[s.key] ? s.color : undefined,
+                          color: visibleStats[s.key] ? s.color : undefined,
                         }}
                       >● {s.label}</button>
                     ))}
@@ -523,7 +484,7 @@ const FactionBattleStats = () => {
                     </LineChart>
                   </ResponsiveContainer>
                   {selHistory.length < 2 && (
-                    <div style={{ textAlign:'center', marginTop:8, fontSize:'0.65rem', color:'rgba(148,163,184,0.35)', fontFamily:'var(--font-heading)', letterSpacing:'1px' }}>
+                    <div className="chart-footnote">
                       📍 1 SNAPSHOT — CHART WILL GROW AS STATS ARE RE-SHARED OVER TIME
                     </div>
                   )}
@@ -536,7 +497,7 @@ const FactionBattleStats = () => {
           {chartTab === 'bar' && (
             <div>
               {barData.length === 0 ? (
-                <div style={{ textAlign:'center', padding:'48px 24px', color:'var(--text-muted)', fontFamily:'var(--font-heading)', letterSpacing:'2px', fontSize:'0.75rem' }}>
+                <div className="chart-empty-hint">
                   NO STATS SHARED YET — MEMBERS MUST SHARE THEIR STATS TO APPEAR HERE
                 </div>
               ) : (
@@ -613,7 +574,7 @@ const FactionBattleStats = () => {
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                  <div style={{ textAlign:'center', marginTop:6, fontSize:'0.6rem', color:'rgba(148,163,184,0.3)', fontFamily:'var(--font-heading)', letterSpacing:'1px' }}>
+                  <div className="chart-footnote">
                     % CHANGE FROM 30-DAY-AGO SNAPSHOT · FALLS BACK TO EARLIEST SAVE IF &lt;30 DAYS OF DATA
                   </div>
                 </>

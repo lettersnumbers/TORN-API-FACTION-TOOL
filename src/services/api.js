@@ -229,49 +229,7 @@ export const fetchUserSpecific = async (selections, additionalParams = '') => {
   }
 };
 
-export const fetchAnyUserSpecific = async (userId, selections) => {
-  const key = getApiKey();
-  if (!key) throw new Error("API Key is missing.");
-  if (!userId) throw new Error("Target User ID is missing.");
-  
-  try {
-    const response = await axios.get(`${BASE_URL}/user/${userId}?selections=${selections}`, {
-      headers: { 'Authorization': `ApiKey ${key}` }
-    });
-    const d = response.data;
-    if (d.error) throw new Error(d.error.error || "Torn API Error");
 
-    let flattened = { ...d };
-    selections.split(',').forEach(sel => { if (d[sel]) flattened = { ...flattened, ...d[sel] }; });
-    return flattened;
-  } catch(error) {
-    if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
-    throw error;
-  }
-};
-
-
-
-
-export const fetchUserCrimes = async () => {
-  const key = getApiKey();
-  if (!key) throw new Error("API Key is missing.");
-
-  try {
-    // v1 API endpoint for crimes — reliably returns the logged-in user's crime data
-    const r = await axios.get('https://api.torn.com/user/?selections=crimes', {
-      params: { key }
-    });
-    const d = r.data;
-    if (d.error) throw new Error(d.error.error || "API Error fetching crimes");
-
-    // v1 returns { crimes: { CrimeName: {...} } }
-    return d.crimes || d;
-  } catch (error) {
-    if (error.response?.data?.error) throw new Error(error.response.data.error.error || error.response.data.error.message);
-    throw error;
-  }
-};
 
 // ==========================================
 // SHARED STATS SYSTEM (Upstash Redis)

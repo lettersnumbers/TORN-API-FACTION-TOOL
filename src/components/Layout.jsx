@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Shield, User, Settings, Menu, X, Zap, ChevronLeft, ChevronRight, BarChart2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Shield, Settings, Menu, X, Zap, BarChart2, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useDataContext } from '../context/DataContext';
 import { fetchUserSpecific, fetchFactionData } from '../services/api';
 import './Layout.css';
@@ -39,7 +39,7 @@ const TCTClock = ({ mini = false }) => {
 // ── Layout ──────────────────────────────────────────────────────────────────
 const Layout = ({ children }) => {
   const location = useLocation();
-  const { userName, factionName, hospitalCount, userHospitalStatus } = useDataContext();
+  const { userName, setUserName, factionName, hospitalCount } = useDataContext();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(
@@ -82,7 +82,7 @@ const Layout = ({ children }) => {
     touchStartX.current = null;
   }, [isMobileOpen]);
 
-  // Live topbar data
+  // Live topbar data — also sets userName from API
   useEffect(() => {
     let active = true;
     const fetch_ = async () => {
@@ -97,17 +97,20 @@ const Layout = ({ children }) => {
           life: b.life, energy: b.energy, nerve: b.nerve, happy: b.happy,
           chain: fRes?.chain || fRes?.basic?.chain || null,
         });
+        // Extract user name from the API response
+        const resolvedName = uRes?.name || uRes?.basic?.name;
+        if (resolvedName) setUserName(resolvedName);
       } catch {}
     };
     fetch_();
     const id = setInterval(fetch_, 30000);
     return () => { active = false; clearInterval(id); };
-  }, [userName]);
+  }, [setUserName]);
 
   // Derived
-  const intensity = Math.min(0.05 + (hospitalCount * 0.02) + (userHospitalStatus * 0.4), 0.6);
-  const blur = Math.min(100 + (hospitalCount * 10) + (userHospitalStatus * 200), 500);
-  const layoutStyle = (hospitalCount > 0 || userHospitalStatus > 0)
+  const intensity = Math.min(0.05 + (hospitalCount * 0.02), 0.6);
+  const blur = Math.min(100 + (hospitalCount * 10), 500);
+  const layoutStyle = hospitalCount > 0
     ? { boxShadow: `inset 0 0 ${blur}px rgba(220,38,38,${intensity})`, transition: 'box-shadow 2s ease-in-out' }
     : { transition: 'box-shadow 2s ease-in-out' };
 
@@ -115,9 +118,6 @@ const Layout = ({ children }) => {
   const userColor = nameToColor(userName || '');
   const chainCount = topbarData?.chain?.current || 0;
   const chainActive = chainCount > 0;
-
-  const isOnFaction = () => location.pathname === '/' || location.pathname.startsWith('/faction');
-  const isOnUser = () => location.pathname.startsWith('/user');
 
   const toggleCollapse = () => setIsCollapsed(c => !c);
   const closeNav = () => setIsMobileOpen(false);
@@ -135,13 +135,6 @@ const Layout = ({ children }) => {
     { to: '/faction/funds', label: 'Faction Funds' },
     { to: '/faction/past-wars', label: 'Past Wars' },
     { to: '/faction/battle-stats', label: 'Battle Stats' },
-  ];
-  const userSubs = [
-    { to: '/user', label: 'Profile & Vitals', end: true },
-    { to: '/user/crimes', label: 'Crimes & Skill' },
-    { to: '/user/stats', label: 'Personal Stats' },
-    { to: '/user/travel', label: 'Flight & Travel' },
-    { to: '/user/battle-stats', label: 'Battle Stats' },
   ];
 
   const BARS = [
@@ -214,7 +207,7 @@ const Layout = ({ children }) => {
               <NavLink
                 to="/"
                 onClick={closeNav}
-                className={() => isOnFaction() ? 'nav-item active' : 'nav-item'}
+                className="nav-item active"
                 title={isCollapsed ? factionName : undefined}
               >
                 <Shield size={17} className="nav-icon" />
@@ -225,33 +218,6 @@ const Layout = ({ children }) => {
             {!isCollapsed && (
               <div className="sub-menu">
                 {factionSubs.map(({ to, label, end }) => (
-                  <NavLink key={to} to={to} end={end} onClick={closeNav}
-                    className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>
-                    {label}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* User */}
-          <div className="nav-group">
-            {!isCollapsed && <div className="nav-group-label">Agent Profile</div>}
-            <div className={`nav-item-wrap${isCollapsed ? ' tooltip-wrap' : ''}`}>
-              <NavLink
-                to="/user"
-                onClick={closeNav}
-                className={() => isOnUser() ? 'nav-item active' : 'nav-item'}
-                title={isCollapsed ? userName : undefined}
-              >
-                <User size={17} className="nav-icon" />
-                {!isCollapsed && <span className="nav-label">{userName}</span>}
-              </NavLink>
-              {isCollapsed && <div className="nav-tip">{userName}</div>}
-            </div>
-            {!isCollapsed && (
-              <div className="sub-menu">
-                {userSubs.map(({ to, label, end }) => (
                   <NavLink key={to} to={to} end={end} onClick={closeNav}
                     className={({ isActive }) => isActive ? 'sub-item active' : 'sub-item'}>
                     {label}
@@ -336,11 +302,8 @@ const Layout = ({ children }) => {
 
       {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
       <nav className="bottom-nav" aria-label="Quick nav">
-        <NavLink to="/" className={() => isOnFaction() ? 'bnav-item active' : 'bnav-item'} onClick={closeNav}>
+        <NavLink to="/" className="bnav-item active" onClick={closeNav}>
           <Shield size={20} /><span>Faction</span>
-        </NavLink>
-        <NavLink to="/user" className={() => isOnUser() ? 'bnav-item active' : 'bnav-item'} onClick={closeNav}>
-          <User size={20} /><span>Profile</span>
         </NavLink>
         <NavLink to="/faction/battle-stats" className={({ isActive }) => isActive ? 'bnav-item active' : 'bnav-item'} onClick={closeNav}>
           <BarChart2 size={20} /><span>Stats</span>
