@@ -1322,6 +1322,331 @@
   gap: 16px;
 }
 
+/* Search */
+.armory-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.armory-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.armory-search {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 14px 10px 40px;
+  color: var(--text-main);
+  width: 100%;
+  max-width: 320px;
+  font-size: 0.9rem;
+}
+
+.armory-search:focus {
+  border-color: var(--accent-primary);
+  outline: none;
+  box-shadow: 0 0 8px rgba(0,240,255,0.15);
+}
+
+/* Alerts */
+.stock-alert {
+  background: rgba(0,0,0,0.3);
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
+
+.stock-alert--critical {
+  border-color: var(--hp-nerve);
+}
+
+.stock-alert--warning {
+  border-color: var(--hp-energy);
+}
+
+.stock-alert-label {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+
+.stock-alert-message {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.stock-alert-rate {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  opacity: 0.7;
+}
+
+/* Category Cards */
+.category-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.category-card {
+  cursor: pointer;
+  transition: border-color 0.2s;
+  border-top: 3px solid transparent;
+}
+
+.category-card:hover {
+  border-color: var(--accent-primary);
+  transform: translateY(-2px);
+}
+
+.category-card--weapons {
+  border-top-color: #e74c3c;
+}
+
+.category-card--armor {
+  border-top-color: #3498db;
+}
+
+.category-card--drugs {
+  border-top-color: var(--accent-primary);
+}
+
+.category-card--medical {
+  border-top-color: var(--hp-life);
+}
+
+/* Loan Bar */
+.loan-bar-container {
+  background: rgba(255,255,255,0.05);
+  border-radius: 6px;
+  height: 24px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.loan-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  opacity: 0.6;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.loan-bar-label {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* Top Consumers */
+.top-consumers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.consumer-list {
+  background: rgba(255,255,255,0.03);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.consumer-list h3 {
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.consumer-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 0.85rem;
+}
+
+.consumer-rank {
+  color: var(--text-muted);
+  margin-right: 8px;
+  min-width: 20px;
+}
+
+.consumer-name {
+  flex: 1;
+}
+
+.consumer-count {
+  font-weight: 700;
+}
+
+.consumer-empty {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* Category Pills */
+.category-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.category-pill {
+  all: unset;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-pill--active {
+  background: rgba(0,240,255,0.1);
+  color: var(--accent-primary);
+  border-color: rgba(0,240,255,0.3);
+}
+
+/* Category Badges */
+.cat-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cat-badge--weapons {
+  background: rgba(231,76,60,0.15);
+  color: #e74c3c;
+}
+
+.cat-badge--armor {
+  background: rgba(52,152,219,0.15);
+  color: #3498db;
+}
+
+.cat-badge--drugs {
+  background: rgba(0,240,255,0.1);
+  color: var(--accent-primary);
+}
+
+.cat-badge--medical {
+  background: rgba(46,204,113,0.15);
+  color: var(--hp-life);
+}
+
+/* Row Modifiers */
+.row-depleted {
+  background: rgba(231,76,60,0.08) !important;
+}
+
+.row-loaned {
+  border-left: 3px solid rgba(0,240,255,0.3);
+}
+
+/* Usage Log */
+.usage-log-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.usage-totals-row td {
+  font-weight: 700;
+  border-top: 2px solid var(--border-color);
+  padding-top: 12px;
+}
+
+/* Value Colors */
+.val-xanax {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.val-medical {
+  color: var(--hp-life);
+  font-weight: 700;
+}
+
+.val-energy {
+  color: var(--hp-energy);
+  font-weight: 700;
+}
+
+/* Usage Bars */
+.usage-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.05);
+  margin-top: 6px;
+  min-width: 80px;
+}
+
+.usage-bar-xan {
+  background: var(--accent-primary);
+}
+
+.usage-bar-med {
+  background: var(--hp-life);
+}
+
+.usage-bar-nrg {
+  background: var(--hp-energy);
+}
+
+/* Sort Headers */
+.sort-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sort-header:hover {
+  color: var(--accent-primary);
+}
+
+.sort-arrow {
+  font-size: 0.7rem;
+  margin-left: 4px;
+  opacity: 0.5;
+}
+
+/* Toolbar & Empty */
+.armory-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.armory-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 /* ─── Past Wars ────────────────────────────────────────────────────────────── */
 
 .war-detail-panel {
@@ -1395,4 +1720,10 @@
   .battle-stats-cta { flex-direction: column; text-align: center; }
 
   .view-toggle-group { flex-wrap: wrap; }
+
+  .category-cards-grid { grid-template-columns: repeat(2, 1fr); }
+  .top-consumers-grid { grid-template-columns: 1fr; }
+  .armory-toolbar { flex-direction: column; align-items: stretch; }
+  .armory-search { max-width: 100%; }
+  .category-pills { overflow-x: auto; }
 }
