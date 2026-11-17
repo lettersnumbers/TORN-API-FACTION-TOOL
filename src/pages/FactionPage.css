@@ -1360,7 +1360,14 @@
   border-radius: 8px;
   padding: 14px 18px;
   margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
+
+.stock-alert-icon { flex-shrink: 0; margin-top: 2px; }
+.stock-alert-body { flex: 1; }
+.stock-alert-qty { flex-shrink: 0; font-weight: 700; font-size: 0.9rem; }
 
 .stock-alert--critical {
   border-color: var(--hp-nerve);
@@ -1388,6 +1395,27 @@
   opacity: 0.7;
 }
 
+/* Dashboard Layout */
+.armory-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.armory-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.armory-section-title {
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
 /* Category Cards */
 .category-cards-grid {
   display: grid;
@@ -1396,14 +1424,40 @@
 }
 
 .category-card {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px 16px;
   cursor: pointer;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
   border-top: 3px solid transparent;
+  background: rgba(6, 10, 18, 0.65);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  text-align: center;
 }
 
 .category-card:hover {
   border-color: var(--accent-primary);
   transform: translateY(-2px);
+}
+
+.category-card-icon {
+  color: var(--text-muted);
+}
+
+.category-card-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.category-card-label {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .category-card--weapons {
