@@ -1359,9 +1359,9 @@
 .bs-card {
   background: rgba(6, 10, 18, 0.65);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 10px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -1378,7 +1378,7 @@
 .bs-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .bs-card-identity {
@@ -1390,6 +1390,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.78rem;
 }
 
 .bs-card-badge {
@@ -1397,60 +1398,60 @@
 }
 
 .bs-card-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.04);
 }
 
 .bs-card-stat-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px 16px;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 0 8px;
 }
 
 .bs-card-stat {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .bs-card-stat-label {
   font-family: var(--font-heading);
-  font-size: 0.62rem;
-  letter-spacing: 2px;
+  font-size: 0.5rem;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+  opacity: 0.7;
 }
 
 .bs-card-stat-value {
   font-family: 'Orbitron', monospace;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   font-weight: 600;
 }
 
 .bs-card-total {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(0,240,255,0.1);
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .bs-card-total-value {
   font-family: 'Orbitron', monospace;
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   font-weight: 700;
 }
 
 .bs-card-expand-hint {
-  margin-top: 10px;
+  margin-top: 4px;
   text-align: center;
-  font-size: 0.6rem;
+  font-size: 0.5rem;
   color: var(--text-muted);
   font-family: var(--font-heading);
   letter-spacing: 1px;
-  opacity: 0.6;
+  opacity: 0.4;
 }
 
 .bs-card--selected .bs-card-expand-hint {

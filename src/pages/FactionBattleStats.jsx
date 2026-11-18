@@ -406,7 +406,7 @@ const FactionBattleStats = () => {
               >
                 {/* Card header: avatar + name + updated badge */}
                 <div className="bs-card-header">
-                  <Avatar playerId={m.player_id} name={m.name} size={36} />
+                  <Avatar playerId={m.player_id} name={m.name} size={28} />
                   <div className="bs-card-identity">
                     <div className="agent-name">
                       {m.name}
