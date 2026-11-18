@@ -305,95 +305,154 @@ const FactionBattleStats = () => {
           </button>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="faction-table" style={{ minWidth: 720 }}>
-            <thead>
-              <tr>
-                <th className="sticky-col-header">AGENT</th>
-                {STAT_CFG.slice(0,4).map(s => (
-                  <th key={s.key} style={{ color: s.color, textAlign:'right' }}>{s.label}</th>
-                ))}
-                <th style={{ color:'var(--accent-primary)', textAlign:'right' }}>TOTAL</th>
-                <th style={{ textAlign:'center' }}>UPDATED</th>
-                <th style={{ textAlign:'center' }}>CHART</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(loadingRoster || loadingStats) ? (
-                <tr><td colSpan={8} style={{ textAlign:'center', padding:32, color:'var(--text-muted)', fontFamily:'var(--font-heading)', letterSpacing:'2px', fontSize:'0.7rem' }}>
-                  LOADING AGENT PROFILES...
-                </td></tr>
-              ) : merged.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign:'center', padding:32, color:'var(--text-muted)' }}>No faction members found</td></tr>
-              ) : merged.map(m => {
-                const ss    = m.savedStats?.stats;
-                const ts    = m.savedStats?.lastUpdated;
-                const stale = staleness(ts);
-                const isMe  = currentPlayerId && m.player_id === currentPlayerId;
-                const isSelected = m.player_id === selectedId;
-                return (
-                  <tr
-                    key={m.player_id}
-                    style={{
-                      background: isSelected ? 'rgba(0,240,255,0.05)' : undefined,
-                      outline: isSelected ? '1px solid rgba(0,240,255,0.15)' : undefined,
-                    }}
-                  >
-                    {/* Avatar + Name — STICKY COLUMN */}
-                    <td className={`sticky-col ${isSelected ? 'selected' : ''}`}>
-                      <div className="agent-cell">
-                        <Avatar playerId={m.player_id} name={m.name} size={32} />
-                        <div>
-                          <div className="agent-name">
-                            {m.name}
-                            {isMe && <span className="you-badge">YOU</span>}
+        {/* ── Desktop table (hidden on mobile) ───────────────────────────── */}
+        <div className="bs-desktop-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table className="faction-table" style={{ minWidth: 720 }}>
+              <thead>
+                <tr>
+                  <th className="sticky-col-header">AGENT</th>
+                  {STAT_CFG.slice(0,4).map(s => (
+                    <th key={s.key} style={{ color: s.color, textAlign:'right' }}>{s.label}</th>
+                  ))}
+                  <th style={{ color:'var(--accent-primary)', textAlign:'right' }}>TOTAL</th>
+                  <th style={{ textAlign:'center' }}>UPDATED</th>
+                  <th style={{ textAlign:'center' }}>CHART</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(loadingRoster || loadingStats) ? (
+                  <tr><td colSpan={8} className="bs-loading-cell">
+                    LOADING AGENT PROFILES...
+                  </td></tr>
+                ) : merged.length === 0 ? (
+                  <tr><td colSpan={8} className="bs-loading-cell">No faction members found</td></tr>
+                ) : merged.map(m => {
+                  const ss    = m.savedStats?.stats;
+                  const ts    = m.savedStats?.lastUpdated;
+                  const stale = staleness(ts);
+                  const isMe  = currentPlayerId && m.player_id === currentPlayerId;
+                  const isSelected = m.player_id === selectedId;
+                  return (
+                    <tr
+                      key={m.player_id}
+                      className={isSelected ? 'bs-row-selected' : ''}
+                    >
+                      <td className={`sticky-col ${isSelected ? 'selected' : ''}`}>
+                        <div className="agent-cell">
+                          <Avatar playerId={m.player_id} name={m.name} size={32} />
+                          <div>
+                            <div className="agent-name">
+                              {m.name}
+                              {isMe && <span className="you-badge">YOU</span>}
+                            </div>
+                            <div className="agent-meta">Lv.{m.level} · {m.position}</div>
                           </div>
-                          <div className="agent-meta">Lv.{m.level} · {m.position}</div>
                         </div>
-                      </div>
-                    </td>
-
-                    {/* Stats or empty */}
-                    {STAT_CFG.slice(0,4).map(s => (
-                      <td key={s.key} className="stat-value" style={{ color: ss ? s.color : 'var(--text-muted)' }}>
-                        {ss ? fmtM(ss[s.key]) : '—'}
                       </td>
-                    ))}
-                    <td className="stat-value highlight" style={{ color: ss ? undefined : 'var(--text-muted)' }}>
-                      {ss ? fmtM(ss.total) : (
-                        isMe
-                          ? <button onClick={handleShareStats} disabled={shareStatus==='sharing'} className="mini-share-btn">
-                              ↗ SHARE
-                            </button>
-                          : <span className="not-shared-label">NOT SHARED</span>
-                      )}
-                    </td>
-
-                    {/* Updated */}
-                    <td style={{ textAlign:'center' }}>
-                      {ss
-                        ? <span className={`intel-stale-badge ${stale.cls}`}>{stale.label}</span>
-                        : <span style={{ fontSize:'0.65rem', color:'rgba(148,163,184,0.3)', letterSpacing:'1px', fontFamily:'var(--font-heading)' }}>—</span>
-                      }
-                    </td>
-
-                    {/* Chart toggle */}
-                    <td style={{ textAlign:'center' }}>
-                      {ss
-                        ? <button
+                      {STAT_CFG.slice(0,4).map(s => (
+                        <td key={s.key} className="stat-value" style={{ color: ss ? s.color : 'var(--text-muted)' }}>
+                          {ss ? fmtM(ss[s.key]) : '—'}
+                        </td>
+                      ))}
+                      <td className="stat-value highlight" style={{ color: ss ? undefined : 'var(--text-muted)' }}>
+                        {ss ? fmtM(ss.total) : (
+                          isMe
+                            ? <button onClick={handleShareStats} disabled={shareStatus==='sharing'} className="mini-share-btn">↗ SHARE</button>
+                            : <span className="not-shared-label">NOT SHARED</span>
+                        )}
+                      </td>
+                      <td style={{ textAlign:'center' }}>
+                        {ss
+                          ? <span className={`intel-stale-badge ${stale.cls}`}>{stale.label}</span>
+                          : <span className="bs-dash-muted">—</span>
+                        }
+                      </td>
+                      <td style={{ textAlign:'center' }}>
+                        {ss && (
+                          <button
                             onClick={() => setSelectedId(id => id === m.player_id ? null : m.player_id)}
-                            style={{ fontSize:'0.6rem', padding:'3px 10px', background: isSelected ? 'rgba(0,240,255,0.15)' : 'rgba(0,240,255,0.04)', border:`1px solid rgba(0,240,255,${isSelected?'0.35':'0.1'})`, borderRadius:8, color: isSelected ? 'var(--accent-primary)' : 'var(--text-muted)', fontFamily:'var(--font-heading)', letterSpacing:'1px', cursor:'pointer', transition:'all 0.2s' }}
+                            className={`bs-chart-toggle-btn ${isSelected ? 'active' : ''}`}
                           >
                             {isSelected ? '▲ HIDE' : '▼ VIEW'}
                           </button>
-                        : null
-                      }
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ── Mobile card view (hidden on desktop) ───────────────────────── */}
+        <div className="bs-mobile-cards">
+          {(loadingRoster || loadingStats) ? (
+            <div className="bs-loading-cell">LOADING AGENT PROFILES...</div>
+          ) : merged.length === 0 ? (
+            <div className="bs-loading-cell">No faction members found</div>
+          ) : merged.map(m => {
+            const ss    = m.savedStats?.stats;
+            const ts    = m.savedStats?.lastUpdated;
+            const stale = staleness(ts);
+            const isMe  = currentPlayerId && m.player_id === currentPlayerId;
+            const isSelected = m.player_id === selectedId;
+            return (
+              <div
+                key={m.player_id}
+                className={`bs-card ${isSelected ? 'bs-card--selected' : ''}`}
+                onClick={() => ss && setSelectedId(id => id === m.player_id ? null : m.player_id)}
+              >
+                {/* Card header: avatar + name + updated badge */}
+                <div className="bs-card-header">
+                  <Avatar playerId={m.player_id} name={m.name} size={36} />
+                  <div className="bs-card-identity">
+                    <div className="agent-name">
+                      {m.name}
+                      {isMe && <span className="you-badge">YOU</span>}
+                    </div>
+                    <div className="agent-meta">Lv.{m.level} · {m.position}</div>
+                  </div>
+                  <div className="bs-card-badge">
+                    {ss
+                      ? <span className={`intel-stale-badge ${stale.cls}`}>{stale.label}</span>
+                      : <span className="not-shared-label">NOT SHARED</span>
+                    }
+                  </div>
+                </div>
+
+                {/* Stat grid: 2x2 + total row */}
+                {ss ? (
+                  <div className="bs-card-stats">
+                    <div className="bs-card-stat-grid">
+                      {STAT_CFG.slice(0,4).map(s => (
+                        <div key={s.key} className="bs-card-stat">
+                          <span className="bs-card-stat-label" style={{ color: s.color }}>{s.label}</span>
+                          <span className="bs-card-stat-value" style={{ color: s.color }}>{fmtM(ss[s.key])}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="bs-card-total">
+                      <span className="bs-card-stat-label accent-text">TOTAL</span>
+                      <span className="bs-card-total-value accent-text">{fmtM(ss.total)}</span>
+                    </div>
+                  </div>
+                ) : isMe ? (
+                  <div className="bs-card-stats">
+                    <button onClick={(e) => { e.stopPropagation(); handleShareStats(); }} disabled={shareStatus==='sharing'} className="mini-share-btn">↗ SHARE MY STATS</button>
+                  </div>
+                ) : null}
+
+                {/* Expand indicator */}
+                {ss && (
+                  <div className="bs-card-expand-hint">
+                    {isSelected ? '▲ Tap to hide chart' : '▼ Tap to view chart'}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
